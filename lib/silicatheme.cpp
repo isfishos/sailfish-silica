@@ -2,12 +2,16 @@
 #include "silicatheme_p.h"
 #include "silicascreen.h"
 #include "silicathemeiconresolver.h"
+#include "themecolors.h"
 
 #include <QDir>
 #include <QFont>
 #include <QPair>
 #include <QRegularExpression>
 #include <QtMath>
+
+Q_GLOBAL_STATIC(Silica::Theme, themeInstance)
+Q_GLOBAL_STATIC(Silica::ThemePrivate, themePrivateInstance)
 
 namespace Silica {
 
@@ -21,6 +25,7 @@ ThemePrivate::ThemePrivate()
     , m_gcFontSizeCategory("/desktop/jolla/theme/font/sizeCategory")
     , m_gcFontSizeMultiplier("/desktop/jolla/theme/font/sizeMultiplier")
     , m_gcFontSizeThreshold("/desktop/jolla/theme/font/sizeThreshold")
+    , m_themeColors(new ThemeColors(this))
     // Font sizes
     , m_fontSizeTiny(20)
     , m_fontSizeExtraSmall(24)
@@ -92,7 +97,7 @@ ThemePrivate::ThemePrivate()
     QObject::connect(&m_gcFontSizeThreshold, &MGConfItem::valueChanged,
                     this, &ThemePrivate::updateFontSizes);
 
-    // m_themeColors->resolveMetaObject();
+    m_themeColors.data()->resolveMetaObject();
 
     // Load auto-scale configuration
     MGConfItem autoScaleConfiguration("/desktop/sailfish/silica/auto_scale_values");
