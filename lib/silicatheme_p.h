@@ -2,9 +2,11 @@
 #define SILICATHEME_P_H
 
 #include <silicatheme.h>
+
 #include <QColor>
 #include <QSize>
 #include <QUrl>
+#include <QScopedPointer>
 #include <MDConfGroup>
 #include <MGConfItem>
 #include <QScreen>
@@ -13,12 +15,31 @@
 
 namespace Silica {
 
+class ThemeColors;
+
+enum class ColorIndex {
+    Primary,
+    Secondary,
+    Highlight,
+    SecondaryHighlight,
+    HighlightBackground,
+    HighlightDimmer,
+    OverlayBackground,
+    BackgroundGlow,
+    Error,
+    WallpaperOverlay,
+    CoverOverlay,
+    ColorCount
+};
+
 class ThemePrivate : public QObject
 {
     Q_OBJECT
 
 public:
     ThemePrivate();
+    static ThemePrivate *instance();
+    ThemeColors *themeColors() { return m_themeColors.data(); }
 
     Theme::ColorScheme m_colorScheme;
     qreal m_pixelRatio;
@@ -133,7 +154,7 @@ private:
     MGConfItem m_gcFontSizeMultiplier; 
     MGConfItem m_gcFontSizeThreshold;
     MDConfGroup m_settings;
-    QMetaObject m_themeColors;
+    QScopedPointer<ThemeColors> m_themeColors;
     QMetaObject m_themeBackground;
     QMetaObject m_lightOnDarkDistanceField;
     QMetaObject m_darkOnLightDistanceField;
