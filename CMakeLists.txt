@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(sailfishsilica)
 
 # Find Qt5 packages
-find_package(Qt5 COMPONENTS Core Gui REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Quick REQUIRED)
 
 # Find mlite5 package
 find_package(PkgConfig REQUIRED)

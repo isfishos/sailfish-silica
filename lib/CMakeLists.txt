@@ -1,9 +1,14 @@
 # Library target
 add_library(sailfishsilica SHARED
+    mousearea.cpp
+    rectangle.cpp
+    silicacontrol.cpp
+    silicaitem.cpp
     silicapalette.cpp
     silicascreen.cpp
     silicatheme.cpp
     silicathemeiconresolver.cpp
+    text.cpp
     themecolors.cpp
 )
 
@@ -11,6 +16,8 @@ add_library(sailfishsilica SHARED
 target_link_libraries(sailfishsilica
     Qt5::Core
     Qt5::Gui
+    Qt5::Quick
+    Qt5::QuickPrivate
     PkgConfig::MLITE5
 )
 
