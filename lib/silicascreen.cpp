@@ -10,6 +10,66 @@ Q_GLOBAL_STATIC(Silica::ScreenPrivate, screenPrivateInstance)
 
 namespace Silica {
 
+// RoundedCorner implementation
+class RoundedCornerPrivate;
+
+RoundedCorner::RoundedCorner(QObject *parent)
+    : QObject(parent)
+    , d_ptr(new RoundedCornerPrivate)
+{
+    d_ptr->x = 0;
+    d_ptr->y = 0;
+    d_ptr->radius = 0;
+}
+
+RoundedCorner::RoundedCorner(int x, int y, int radius, QObject *parent)
+    : QObject(parent)
+    , d_ptr(new RoundedCornerPrivate)
+{
+    d_ptr->x = x;
+    d_ptr->y = y;
+    d_ptr->radius = radius;
+}
+
+RoundedCorner::~RoundedCorner()
+{
+    delete d_ptr;
+}
+
+int RoundedCorner::x() const
+{
+    return d_ptr->x;
+}
+
+int RoundedCorner::y() const
+{
+    return d_ptr->y;
+}
+
+void RoundedCorner::setPosition(int x, int y)
+{
+    if (d_ptr->x == x && d_ptr->y == y) {
+        return;
+    }
+    d_ptr->x = x;
+    d_ptr->y = y;
+    emit positionChanged();
+}
+
+int RoundedCorner::radius() const
+{
+    return d_ptr->radius;
+}
+
+void RoundedCorner::setRadius(int radius)
+{
+    if (d_ptr->radius == radius) {
+        return;
+    }
+    d_ptr->radius = radius;
+    emit radiusChanged();
+}
+
 ScreenPrivate::ScreenPrivate(QObject *parent)
     : QObject(parent)
     , m_width(540)
