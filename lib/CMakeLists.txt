@@ -10,6 +10,13 @@ add_library(sailfishsilica SHARED
     silicathemeiconresolver.cpp
     text.cpp
     themecolors.cpp
+    silicabackground/abstractfilter.cpp
+    silicabackground/sequencefilter.cpp
+    silicabackground/convolutionfilter.cpp
+    silicabackground/resizefilter.cpp
+    silicabackground/repeatfilter.cpp
+    silicabackground/shaderfilter.cpp
+    silicabackground/kernel.cpp
 )
 
 # Link Qt5 libraries
