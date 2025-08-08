@@ -10,6 +10,9 @@ add_library(sailfishsilica SHARED
     silicathemeiconresolver.cpp
     text.cpp
     themecolors.cpp
+    logging.cpp
+    silicaimageprovider.cpp
+    themedistancefield.cpp
     silicabackground/abstractfilter.cpp
     silicabackground/sequencefilter.cpp
     silicabackground/convolutionfilter.cpp
