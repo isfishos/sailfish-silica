@@ -15,6 +15,11 @@ Q_GLOBAL_STATIC(Silica::ThemePrivate, themePrivateInstance)
 
 namespace Silica {
 
+ThemePrivate *ThemePrivate::instance()
+{
+    return themePrivateInstance();
+}
+
 ThemePrivate::ThemePrivate()
     : m_colorScheme(Theme::LightOnDark)
     , m_pixelRatio(-1.0)
@@ -584,32 +589,92 @@ QStringList Theme::launcherIconDirectories()
 // Theme color calculation methods
 QColor Theme::highlightFromColor(const QColor &color, ColorScheme scheme)
 {
-    // Implementation needed
-    return color;
+    QColor c = color.isValid() ? color : (scheme == LightOnDark ? QColor(0, 174, 255) : QColor(0, 122, 204));
+    qreal h, s, l, a;
+    c.getHslF(&h, &s, &l, &a);
+    if (scheme == LightOnDark) {
+        s = qMin(1.0, s * 1.1);
+        l = qMin(1.0, l * 1.15);
+    } else {
+        s = qMin(1.0, s * 0.9);
+        l = qMax(0.0, l * 0.65);
+    }
+    QColor out;
+    out.setHslF(h, s, l, a);
+    return out;
 }
 
 QColor Theme::secondaryHighlightFromColor(const QColor &color, ColorScheme scheme)
 {
-    // Implementation needed
-    return color;
+    QColor c = highlightFromColor(color, scheme);
+    qreal h, s, l, a;
+    c.getHslF(&h, &s, &l, &a);
+    s = qMin(1.0, s * 0.6);
+    l = qMin(1.0, l * 0.95);
+    QColor out;
+    out.setHslF(h, s, l, a);
+    return out;
 }
 
 QColor Theme::highlightBackgroundFromColor(const QColor &color, ColorScheme scheme)
 {
-    // Implementation needed
-    return color;
+    QColor c = highlightFromColor(color, scheme);
+    c.setAlphaF(Theme::instance()->highlightBackgroundOpacity());
+    return c;
 }
 
 QColor Theme::highlightDimmerFromColor(const QColor &color, ColorScheme scheme)
 {
-    // Implementation needed
-    return color;
+    QColor c = highlightFromColor(color, scheme);
+    qreal h, s, l, a;
+    c.getHslF(&h, &s, &l, &a);
+    l = qMax(0.0, l * 0.5);
+    QColor out;
+    out.setHslF(h, s, l, a);
+    out.setAlphaF(qMin(1.0, Theme::instance()->highlightBackgroundOpacity() * 1.5));
+    return out;
 }
 
 QString Theme::_encodeTextLinks(const QString &text, bool shortenUrl)
 {
-    // Implementation needed
-    return text;
+    if (text.isEmpty()) return text;
+    QString out;
+    out.reserve(text.size() + 16);
+    QRegularExpression urlRe("(https?://|www\\.)[\\w\-._~:/?#\\[\\]@!$&'()*+,;=%]+",
+                             QRegularExpression::CaseInsensitiveOption);
+    QRegularExpression emailRe("[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",
+                               QRegularExpression::CaseInsensitiveOption);
+    auto encode = [&](const QString &input, const QRegularExpression &re, bool isUrl) {
+        QString result;
+        int last = 0;
+        auto it = re.globalMatch(input);
+        while (it.hasNext()) {
+            auto m = it.next();
+            result += input.midRef(last, m.capturedStart() - last).toString().toHtmlEscaped();
+            QString link = m.captured();
+            QString href = link;
+            if (isUrl && href.startsWith("www.", Qt::CaseInsensitive)) {
+                href.prepend("http://");
+            }
+            QString label = link;
+            if (shortenUrl && isUrl) {
+                // Keep scheme/host, elide path
+                int slash = label.indexOf('/', label.startsWith("http") ? label.indexOf("://") + 3 : 0);
+                if (slash > 0 && slash < label.size()-1) {
+                    label = label.left(slash+1) + "…";
+                }
+            }
+            result += QStringLiteral("<a href=\"") + href.toHtmlEscaped() + QStringLiteral("\">")
+                    + label.toHtmlEscaped() + QStringLiteral("</a>");
+            last = m.capturedEnd();
+        }
+        result += input.midRef(last).toString().toHtmlEscaped();
+        return result;
+    };
+
+    // First URLs, then emails on the remaining text prevents nested anchors
+    QString tmp = encode(text, urlRe, true);
+    return encode(tmp, emailRe, false);
 }
 
 void Theme::_setHighlightColor(QColor color)
