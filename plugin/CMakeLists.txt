@@ -1,0 +1,73 @@
+add_library(sailfishsilicaplugin SHARED
+    sailfishsilicaplugin.cpp
+    animatedloader.cpp
+    backgroundrectangle.cpp
+    buttonlayout.cpp
+    autoscroll.cpp
+    autoscrollcontroller.cpp
+    declarativeclipboard.cpp
+    declarativebounceeffect.cpp
+    applicationbackground.cpp
+    declarativeconfig.cpp
+    declarativecover.cpp
+    declarativecoveraction.cpp
+    declarativecoveractionarea.cpp
+    declarativecoveractionlist.cpp
+    declarativecoverwindow.cpp
+    declarativedatetime.cpp
+    declarativedialogresult.cpp
+    declarativedialogstatus.cpp
+    declarativedimmedregion.cpp
+    declarativedock.cpp
+    declarativedragfilter.cpp
+    declarativeenterkey.cpp
+    declarativefocusbehavior.cpp
+    declarativeformatter.cpp
+    declarativeframerate.cpp
+    declarativeopacityramp.cpp
+    declarativeorientation.cpp
+    declarativepagenavigation.cpp
+    declarativepagestackaction.cpp
+    declarativepagestackbase.cpp
+    declarativepagestatus.cpp
+    declarativepreedittext.cpp
+    declarativequickscrollbuttonbase.cpp
+    declarativestandardpaths.cpp
+    declarativetabviewaction.cpp
+    declarativetextbaseitem.cpp
+    declarativetexteditor.cpp
+    declarativetouchblocker.cpp
+    declarativetouchinteraction.cpp
+    declarativeunderline.cpp
+    declarativeutil.cpp
+    declarativevariantinterpolator.cpp
+    declarativevisibilitycull.cpp
+    declarativewindow.cpp
+    dragdetectoritem.cpp
+    drawingarea.cpp
+    formattingproxymodel.cpp
+    linegraph.cpp
+    lineitem.cpp
+    minversemousearea.cpp
+    notice.cpp
+    notices.cpp
+    overlaygradient.cpp
+    pagedview.cpp
+    profilelistener.cpp
+    proxyvalidator.cpp
+    pulleymenulogic.cpp
+    quickscrolldirection.cpp
+    remorsecache.cpp
+    roundedwindowcorners.cpp
+)
+
+target_link_libraries(sailfishsilicaplugin
+    Qt5::Core
+    Qt5::Qml
+    Qt5::Quick
+    sailfishsilica
+)
+
+set_target_properties(sailfishsilicaplugin PROPERTIES
+    OUTPUT_NAME sailfishsilicaplugin
+)

@@ -22,10 +22,10 @@ class IconInfoPrivate {
 public:
     QString filePath;
     IconInfo::IconType iconType;
-   
+
     IconInfoPrivate(const QString &filePath, IconInfo::IconType iconType)
         : filePath(filePath), iconType(iconType) {}
-    
+
     IconInfoPrivate(const IconInfoPrivate &other)
         : filePath(other.filePath), iconType(other.iconType) {}
 };

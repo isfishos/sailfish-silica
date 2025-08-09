@@ -288,7 +288,7 @@ QSGMaterialShader *BackgroundState::createInteriorShader() const
     QByteArray vertex = m_vertexShader + "\n void main() {"
                                          "\n backgroundMain();"
                                          "\n }";
-    
+
     QByteArray fragment = m_fragmentShader + "\n void main() {"
                                          "\n backgroundMain();"
                                          "\n }";
@@ -301,7 +301,7 @@ QSGMaterialShader *BackgroundState::createInteriorAlphaShader() const
     QByteArray vertex = m_vertexShader + "\n void main() {"
                                          "\n backgroundMain();"
                                          "\n }";
-    
+
     QByteArray fragment = QByteArray("\n uniform lowp float silica_opacity;")
                          + m_fragmentShader 
                          + "\n void main() {"
@@ -321,7 +321,7 @@ QSGMaterialShader *BackgroundState::createCornerShader() const
                        "\n silica_c = silica_corner;"
                        "\n backgroundMain();"
                        "\n }";
-    
+
     QByteArray fragment
             = "\n varying highp vec2 silica_c;"
             "\n uniform lowp float silica_opacity;"
@@ -419,7 +419,7 @@ void InteriorShader::updateState(
         if (!oldState || oldState->source != newState->source) {
             functions->glActiveTexture(GL_TEXTURE0 + activeTexture);
             program->setUniformValue(id_sourceTexture, activeTexture);
-            
+
             if (source) {
                 source->setFiltering(QSGTexture::Linear);
                 source->bind();
@@ -499,9 +499,9 @@ void InteriorShader::updateState(
 
             sourceMatrix *= transformMatrix;
             sourceMatrix.scale(float(scaleX), float(scaleY));
-            
+
             program->setUniformValue(id_sourceMatrix, sourceMatrix);
-            
+
             if (id_clip != -1)
             {
                 QPointF center = sourceSubRect.center();
