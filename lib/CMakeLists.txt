@@ -37,6 +37,8 @@ set_target_properties(sailfishsilica PROPERTIES
     SOVERSION ${VERSION_MAJOR}
 )
 
+target_compile_definitions(sailfishsilica PRIVATE SAILFISH_SILICA_BUILD_LIBRARY)
+
 # Install rules
 install(TARGETS sailfishsilica
     LIBRARY DESTINATION lib

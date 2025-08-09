@@ -250,7 +250,7 @@ public:
     Q_INVOKABLE static QColor secondaryHighlightFromColor(const QColor &color, Silica::Theme::ColorScheme scheme);
     Q_INVOKABLE static QColor highlightBackgroundFromColor(const QColor &color, Silica::Theme::ColorScheme scheme);
     Q_INVOKABLE static QColor highlightDimmerFromColor(const QColor &color, Silica::Theme::ColorScheme scheme);
-    
+
     static QString _encodeTextLinks(const QString &text, bool shortenUrl = false);
 
 signals:

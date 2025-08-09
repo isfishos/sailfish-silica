@@ -159,7 +159,7 @@ private:
     QMetaObject m_lightOnDarkDistanceField;
     QMetaObject m_darkOnLightDistanceField;
     QStringList m_launcherIconDirectories;
-    
+
     void updateFontSizes();
     void commitAmbienceUpdate();
     void processTextChunk(QString &result, QString &remainingText, 

@@ -1,0 +1,83 @@
+add_library(sailfishsilicaplugin SHARED
+    animatedloader.cpp
+    applicationbackground.cpp
+    autoscroll.cpp
+    autoscrollcontroller.cpp
+    backgroundrectangle.cpp
+    buttonlayout.cpp
+    declarativebounceeffect.cpp
+    declarativebusyindicatorsize.cpp
+    declarativeclipboard.cpp
+    declarativeconfig.cpp
+    declarativecover.cpp
+    declarativecoveraction.cpp
+    declarativecoveractionarea.cpp
+    declarativecoveractionlist.cpp
+    declarativecoverwindow.cpp
+    declarativecutoutmode.cpp
+    declarativedatetime.cpp
+    declarativedialogresult.cpp
+    declarativedialogstatus.cpp
+    declarativedimmedregion.cpp
+    declarativedock.cpp
+    declarativedragfilter.cpp
+    declarativeenterkey.cpp
+    declarativefocusbehavior.cpp
+    declarativeformatter.cpp
+    declarativeframerate.cpp
+    declarativeopacityramp.cpp
+    declarativeorientation.cpp
+    declarativepagenavigation.cpp
+    declarativepagestackaction.cpp
+    declarativepagestackbase.cpp
+    declarativepagestatus.cpp
+    declarativepreedittext.cpp
+    declarativequickscrollbuttonbase.cpp
+    declarativestandardpaths.cpp
+    declarativetabviewaction.cpp
+    declarativetextbaseitem.cpp
+    declarativetexteditor.cpp
+    declarativetouchblocker.cpp
+    declarativetouchinteraction.cpp
+    declarativeunderline.cpp
+    declarativeutil.cpp
+    declarativevariantinterpolator.cpp
+    declarativevisibilitycull.cpp
+    declarativewindow.cpp
+    dragdetectoritem.cpp
+    drawingarea.cpp
+    formattingproxymodel.cpp
+    linegraph.cpp
+    lineitem.cpp
+    minversemousearea.cpp
+    notice.cpp
+    notices.cpp
+    overlaygradient.cpp
+    pagedview.cpp
+    profilelistener.cpp
+    proxyvalidator.cpp
+    pulleymenulogic.cpp
+    quickscrolldirection.cpp
+    remorsecache.cpp
+    roundedwindowcorners.cpp
+    sailfishsilicaplugin.cpp
+    slideable.cpp
+    stringlistmodel.cpp
+    swipegesturearea.cpp
+    textlayoutmodel.cpp
+    timepickermode.cpp
+    timezoneupdater.cpp
+    transientimageprovider.cpp
+    wallpaperwindow.cpp
+)
+
+target_link_libraries(sailfishsilicaplugin
+    Qt5::Core
+    Qt5::Qml
+    Qt5::Quick
+    sailfishsilica
+)
+
+set_target_properties(sailfishsilicaplugin PROPERTIES
+    OUTPUT_NAME sailfishsilicaplugin
+)

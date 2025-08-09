@@ -140,7 +140,7 @@ IconInfo ThemeIconResolver::resolveIcon(const QString &id, Theme::ColorScheme co
     }
 
     Q_D(const ThemeIconResolver);
-    
+
     QString resolvedPath;
     IconInfo::IconType resolvedType = IconInfo::MonochromeIcon;
 
@@ -153,7 +153,7 @@ IconInfo ThemeIconResolver::resolveIcon(const QString &id, Theme::ColorScheme co
             resolvedType = IconInfo::MonochromeIcon;
             break;
         }
-        
+
         // Then try color icons
         iconPath = root + QLatin1String("/icons/") + id;
         if (QFileInfo::exists(iconPath)) {
@@ -165,7 +165,7 @@ IconInfo ThemeIconResolver::resolveIcon(const QString &id, Theme::ColorScheme co
         // Check pixel ratio subdirectories if needed
         if (d->m_pixelRatio > 1.0) {
             QString ratioDir = QString("z%1").arg(d->m_pixelRatio, 0, 'f', d->m_pixelRatio == floor(d->m_pixelRatio) ? 1 : 2);
-            
+
             iconPath = root + QLatin1Char('/') + ratioDir + QLatin1String("/icons-monochrome/") + id;
             if (QFileInfo::exists(iconPath)) {
                 resolvedPath = iconPath;
