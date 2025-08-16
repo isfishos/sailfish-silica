@@ -1,6 +1,7 @@
 add_library(sailfishsilicaplugin SHARED
     animatedloader.cpp
     applicationbackground.cpp
+    autofill.cpp
     autoscroll.cpp
     autoscrollcontroller.cpp
     backgroundrectangle.cpp
@@ -25,6 +26,7 @@ add_library(sailfishsilicaplugin SHARED
     declarativefocusbehavior.cpp
     declarativeformatter.cpp
     declarativeframerate.cpp
+    declarativeglassitem.cpp
     declarativeopacityramp.cpp
     declarativeorientation.cpp
     declarativepagenavigation.cpp
@@ -39,6 +41,7 @@ add_library(sailfishsilicaplugin SHARED
     declarativetexteditor.cpp
     declarativetouchblocker.cpp
     declarativetouchinteraction.cpp
+    declarativetruncationmode.cpp
     declarativeunderline.cpp
     declarativeutil.cpp
     declarativevariantinterpolator.cpp
@@ -47,6 +50,8 @@ add_library(sailfishsilicaplugin SHARED
     dragdetectoritem.cpp
     drawingarea.cpp
     formattingproxymodel.cpp
+    horizontalautoscroll.cpp
+    horizontalautoscroll.h
     linegraph.cpp
     lineitem.cpp
     minversemousearea.cpp
@@ -68,6 +73,8 @@ add_library(sailfishsilicaplugin SHARED
     timepickermode.cpp
     timezoneupdater.cpp
     transientimageprovider.cpp
+    verticalautoscroll.cpp
+    verticalautoscroll.h
     wallpaperwindow.cpp
 )
 

@@ -1,5 +1,6 @@
 # Library target
 add_library(sailfishsilica SHARED
+    highlightimagebase.cpp
     mousearea.cpp
     rectangle.cpp
     silicacontrol.cpp
@@ -8,6 +9,7 @@ add_library(sailfishsilica SHARED
     silicascreen.cpp
     silicatheme.cpp
     silicathemeiconresolver.cpp
+    silicathemetransaction.cpp
     text.cpp
     themecolors.cpp
     logging.cpp
@@ -21,6 +23,7 @@ add_library(sailfishsilica SHARED
     silicabackground/shaderfilter.cpp
     silicabackground/kernel.cpp
     silicabackground/fill.cpp
+    silicabackground/filteredimage.cpp
 )
 
 # Link Qt5 libraries
