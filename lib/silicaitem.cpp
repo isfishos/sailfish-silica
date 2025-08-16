@@ -3,12 +3,14 @@
 #include "silicacontrol.h"
 #include "silicacontrol_p.h"
 #include "silicapalette_p.h"
+#include "mousearea.h"
 #include "mousearea_p.h"
+#include "silicabackground/fill.h"
 
 namespace Silica {
 
 AbstractItemPrivate::AbstractItemPrivate()
-    : m_palette(nullptr)
+    : m_palette()
     , m_control(nullptr)
     , m_highlighted(false)
     , m_explicitHighlighted(false)
@@ -65,11 +67,9 @@ void AbstractItemPrivate::updateControl(QQuickItem *item)
                 setHighlighted(m_control->isHighlighted());
             }
 
-            if (m_palette) {
-                PalettePrivate::get(m_palette)->updateParent(PalettePrivate::get(m_control->m_palette));
-            }
-        } else if (m_palette && item->parentItem()) {
-            PalettePrivate::get(m_palette)->updateParent(nullptr);
+            PalettePrivate::get(&m_palette)->updateParent(PalettePrivate::get(&m_control->m_palette));
+        } else if (item->parentItem()) {
+            PalettePrivate::get(&m_palette)->updateParent(nullptr);
         }
     }
 }
@@ -115,7 +115,7 @@ Item::~Item()
 
 Palette *Item::palette() const
 {
-    return d_ptr->m_palette;
+    return &d_ptr->m_palette;
 }
 
 bool Item::isHighlighted() const

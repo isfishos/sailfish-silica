@@ -17,7 +17,7 @@ public:
     explicit Text(QQuickItem *parent = nullptr);
     ~Text();
 
-    Palette *palette() const { return AbstractItemPrivate::m_palette; }
+    Palette *palette() const { return const_cast<Palette*>(&m_palette); }
     using AbstractItemPrivate::isHighlighted;
     using AbstractItemPrivate::setHighlighted;
     void resetHighlighted() { setHighlighted(false); }

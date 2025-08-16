@@ -24,7 +24,7 @@ public:
 
     ControlPrivate* findNearestControlAncestor(QQuickItem* item) const;
 
-    Palette *m_palette;
+    Palette m_palette;
     ControlPrivate *m_control;
     bool m_highlighted = false;
     bool m_explicitHighlighted = false;

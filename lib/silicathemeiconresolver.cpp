@@ -144,42 +144,18 @@ IconInfo ThemeIconResolver::resolveIcon(const QString &id, Theme::ColorScheme co
     QString resolvedPath;
     IconInfo::IconType resolvedType = IconInfo::MonochromeIcon;
 
-    // Check icon roots
-    for (const QString &root : d->iconRoots) {
-        // Try monochrome icons first
-        QString iconPath = root + QLatin1String("/icons-monochrome/") + id;
-        if (QFileInfo::exists(iconPath)) {
-            resolvedPath = iconPath;
-            resolvedType = IconInfo::MonochromeIcon;
-            break;
-        }
-
-        // Then try color icons
-        iconPath = root + QLatin1String("/icons/") + id;
-        if (QFileInfo::exists(iconPath)) {
-            resolvedPath = iconPath;
-            resolvedType = IconInfo::ColorIcon;
-            break;
-        }
-
-        // Check pixel ratio subdirectories if needed
-        if (d->m_pixelRatio > 1.0) {
-            QString ratioDir = QString("z%1").arg(d->m_pixelRatio, 0, 'f', d->m_pixelRatio == floor(d->m_pixelRatio) ? 1 : 2);
-
-            iconPath = root + QLatin1Char('/') + ratioDir + QLatin1String("/icons-monochrome/") + id;
+    // Check icon nodes
+    for (const ImageDirNode &node : d->getImageDirNodes()) {
+        // Try each suffix for this node
+        for (const QString &suffix : node.suffixList) {
+            QString iconPath = node.path + id + suffix;
             if (QFileInfo::exists(iconPath)) {
                 resolvedPath = iconPath;
-                resolvedType = IconInfo::MonochromeIcon;
-                break;
-            }
-
-            iconPath = root + QLatin1Char('/') + ratioDir + QLatin1String("/icons/") + id;
-            if (QFileInfo::exists(iconPath)) {
-                resolvedPath = iconPath;
-                resolvedType = IconInfo::ColorIcon;
+                resolvedType = node.iconType;
                 break;
             }
         }
+        if (!resolvedPath.isEmpty()) break;
     }
 
     return IconInfo(resolvedPath, resolvedType);

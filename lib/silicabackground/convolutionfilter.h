@@ -26,6 +26,7 @@ public:
 
     Kernel kernel() const;
     void setKernel(const Kernel &kernel);
+    void resetKernel();
 
 Q_SIGNALS:
     void kernelChanged();
@@ -34,7 +35,6 @@ protected:
     explicit ConvolutionFilter(ConvolutionFilterPrivate &dd, QObject *parent);
 
 private:
-    inline void resetKernel();
 };
 
 }}}

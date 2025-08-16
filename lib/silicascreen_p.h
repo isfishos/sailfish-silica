@@ -20,6 +20,8 @@ public:
 class ScreenPrivate : public QObject {
     Q_OBJECT
 public:
+    static ScreenPrivate *instance();
+
     explicit ScreenPrivate(QObject *parent = nullptr);
     ~ScreenPrivate();
 

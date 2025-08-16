@@ -114,21 +114,19 @@ QQuickTextureFactory *ImageProvider::requestTexture(const QString &id, QSize *si
     }
 
     const IconInfo info = d_ptr->iconResolver.resolveIcon(iconId, Theme::instance()->colorScheme());
+
     if (info.filePath().isEmpty()) {
-        // Return a 1x1 transparent
-        QImage img(1, 1, QImage::Format_ARGB32_Premultiplied);
-        img.fill(Qt::transparent);
-        if (size) *size = img.size();
-        return QQuickTextureFactory::textureFactoryForImage(img);
+        // Return nullptr for unknown icons
+        if (size) *size = QSize();
+        return nullptr;
     }
 
     QImageReader reader(info.filePath());
     QImage img = reader.read();
     if (img.isNull()) {
-        QImage fallback(1, 1, QImage::Format_ARGB32_Premultiplied);
-        fallback.fill(Qt::transparent);
-        if (size) *size = fallback.size();
-        return QQuickTextureFactory::textureFactoryForImage(fallback);
+        // Return nullptr for unreadable images
+        if (size) *size = QSize();
+        return nullptr;
     }
 
     const bool monochrome = (info.iconType() == IconInfo::MonochromeIcon) || parseMonochromeId(iconId);
@@ -145,5 +143,3 @@ QQuickTextureFactory *ImageProvider::requestTexture(const QString &id, QSize *si
     if (size) *size = img.size();
     return QQuickTextureFactory::textureFactoryForImage(img);
 }
-
-

@@ -1,12 +1,13 @@
 #ifndef SILICA_MOUSEAREA_H
 #define SILICA_MOUSEAREA_H
 
-#include <silicapalette.h>
+#include <silicaglobal.h>
 #include <private/qquickmousearea_p.h>
 
 namespace Silica {
 
 class MouseAreaPrivate;
+class Palette;
 
 class SAILFISH_SILICA_EXPORT MouseArea : public QQuickMouseArea
 {

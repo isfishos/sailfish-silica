@@ -246,10 +246,11 @@ void ScreenPrivate::readRoundedCorners()
 
 ScreenPrivate::~ScreenPrivate()
 {
-    delete m_topLeftCorner;
-    delete m_topRightCorner;
-    delete m_bottomLeftCorner;
-    delete m_bottomRightCorner;
+}
+
+ScreenPrivate* ScreenPrivate::instance()
+{
+    return screenPrivateInstance();
 }
 
 Screen* Screen::instance()
@@ -259,13 +260,12 @@ Screen* Screen::instance()
 
 Screen::Screen(QObject *parent)
     : QObject(parent)
-    , m_private(new ScreenPrivate(this))
+    , m_private(ScreenPrivate::instance())
 {
 }
 
 Screen::~Screen()
 {
-    delete m_private;
 }
 
 int Screen::width() const

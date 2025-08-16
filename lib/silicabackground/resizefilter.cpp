@@ -2,6 +2,7 @@
 
 #include "resizefilter.h"
 #include "convolutionfilter_p.h"
+#include "fill.h"
 
 namespace Sailfish { namespace Silica { namespace Background {
 

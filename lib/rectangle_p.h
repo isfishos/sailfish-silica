@@ -17,7 +17,7 @@ public:
     explicit Rectangle(QQuickItem *parent = nullptr);
     ~Rectangle();
 
-    Silica::Palette *palette() const { return m_palette; }
+    Silica::Palette *palette() const { return const_cast<Palette*>(&m_palette); }
 
     using AbstractItemPrivate::isHighlighted;
     using AbstractItemPrivate::setHighlighted;

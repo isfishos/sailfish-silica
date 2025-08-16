@@ -2,9 +2,10 @@
 #define MOUSEAREA_P_H
 
 #include <silicacontrol_p.h>
-#include "mousearea.h"
 
 namespace Silica {
+
+class MouseArea;
 
 class MouseAreaPrivate : public ControlPrivate {
     Q_DECLARE_PUBLIC(MouseArea)
@@ -16,7 +17,9 @@ public:
         return static_cast<MouseAreaPrivate *>(mouseArea->d_func());
     }
 
-    void highlightedChanged() override;
+    void highlightedChanged();
+
+    bool m_highlighted;
 };
 
 } // namespace Silica
