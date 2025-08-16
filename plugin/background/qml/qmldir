@@ -1,25 +1,23 @@
 module Sailfish.Silica.Background
 plugin SailfishSilicaBackgroundPlugin
-classname SailfishSilicaBackgroundPlugin
-typeinfo plugins.qmltypes
-internal CommonFilters CommonFilters.qml
-internal CommonKeyboardMaterials CommonKeyboardMaterials.qml
-internal CommonMaterials CommonMaterials.qml
-internal GlassBlurDark GlassBlurDark.qml
-internal GlassBlurLight GlassBlurLight.qml
-internal PlatformKeyboardMaterials PlatformKeyboardMaterials.qml
-singleton Filters 1.0 Filters.qml
-singleton Materials 1.0 Materials.qml
-singleton KeyboardMaterials 1.0 KeyboardMaterials.qml
 BlurMaterial 1.0 BlurMaterial.qml
 ColorBackground 1.0 ColorBackground.qml
+CommonFilters 1.0 CommonFilters.qml
+CommonKeyboardMaterials 1.0 CommonKeyboardMaterials.qml
+CommonMaterials 1.0 CommonMaterials.qml
 ConvolutionFilter 1.0 ConvolutionFilter.qml
+Filters 1.0 Filters.qml
 GlassBlur 1.0 GlassBlur.qml
+GlassBlurDark 1.0 GlassBlurDark.qml
+GlassBlurLight 1.0 GlassBlurLight.qml
 GlassMaterial 1.0 GlassMaterial.qml
 ImageWallpaper 1.0 ImageWallpaper.qml
 KeyboardBackground 1.0 KeyboardBackground.qml
+KeyboardMaterials 1.0 KeyboardMaterials.qml
 Material 1.0 Material.qml
+Materials 1.0 Materials.qml
 PlatformFilters 1.0 PlatformFilters.qml
+PlatformKeyboardMaterials 1.0 PlatformKeyboardMaterials.qml
 PlatformMaterials 1.0 PlatformMaterials.qml
 RepeatFilter 1.0 RepeatFilter.qml
 ResizeFilter 1.0 ResizeFilter.qml

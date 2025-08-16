@@ -82,6 +82,11 @@ set_target_properties(sailfishsilicaplugin PROPERTIES
     OUTPUT_NAME sailfishsilicaplugin
 )
 
+# Add include directories for the library headers
+target_include_directories(sailfishsilicaplugin PRIVATE
+    ${CMAKE_SOURCE_DIR}/lib
+)
+
 # Function to find Qt QML install directory using qmake
 function(FindQtInstallQml)
     find_program(QMAKE NAMES qmake5 qmake)
@@ -98,6 +103,9 @@ endfunction()
 
 # Get Qt QML install directory
 FindQtInstallQml()
+
+# Add background plugin subdirectory
+add_subdirectory(background)
 
 # Install the plugin to the QML module directory
 install(TARGETS sailfishsilicaplugin
