@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: sailfish-silica
+Description: Sailfish Silica UI Framework
+Version: @VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@
+Requires: Qt5Core Qt5Gui Qt5Quick Qt5Qml
+Libs: -L${libdir} -lsailfishsilica
+Cflags: -I${includedir}/sailfish-silica

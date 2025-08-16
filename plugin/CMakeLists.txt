@@ -81,3 +81,41 @@ target_link_libraries(sailfishsilicaplugin
 set_target_properties(sailfishsilicaplugin PROPERTIES
     OUTPUT_NAME sailfishsilicaplugin
 )
+
+# Function to find Qt QML install directory using qmake
+function(FindQtInstallQml)
+    find_program(QMAKE NAMES qmake5 qmake)
+    if(NOT QMAKE)
+        message(FATAL_ERROR "qmake not found")
+    endif()
+    execute_process(
+        COMMAND ${QMAKE} -query QT_INSTALL_QML
+        OUTPUT_VARIABLE PROC_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(QT_INSTALL_QML ${PROC_RESULT} PARENT_SCOPE)
+endfunction()
+
+# Get Qt QML install directory
+FindQtInstallQml()
+
+# Install the plugin to the QML module directory
+install(TARGETS sailfishsilicaplugin
+    LIBRARY DESTINATION ${QT_INSTALL_QML}/Sailfish/Silica
+)
+
+# Install QML files if they exist
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/qml)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/qml/
+        DESTINATION ${QT_INSTALL_QML}/Sailfish/Silica
+        FILES_MATCHING PATTERN "*.qml"
+        PATTERN "*.js"
+        PATTERN "qmldir"
+    )
+endif()
+
+# Install plugin headers for development
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+    DESTINATION include/sailfish-silica/plugin
+    FILES_MATCHING PATTERN "*.h"
+)

@@ -39,7 +39,20 @@ set_target_properties(sailfishsilica PROPERTIES
 
 target_compile_definitions(sailfishsilica PRIVATE SAILFISH_SILICA_BUILD_LIBRARY)
 
-# Install rules
+# Install rules for the library
 install(TARGETS sailfishsilica
     LIBRARY DESTINATION lib
+)
+
+# Install headers
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+    DESTINATION include/sailfish-silica
+    FILES_MATCHING PATTERN "*.h"
+    PATTERN "silicabackground/*.h"
+)
+
+# Install pkg-config file
+configure_file(sailfish-silica.pc.in sailfish-silica.pc @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sailfish-silica.pc
+    DESTINATION lib/pkgconfig
 )
