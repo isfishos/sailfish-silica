@@ -20,6 +20,7 @@ add_library(sailfishsilica SHARED
     silicabackground/repeatfilter.cpp
     silicabackground/shaderfilter.cpp
     silicabackground/kernel.cpp
+    silicabackground/fill.cpp
 )
 
 # Link Qt5 libraries
@@ -37,7 +38,7 @@ set_target_properties(sailfishsilica PROPERTIES
     SOVERSION ${VERSION_MAJOR}
 )
 
-target_compile_definitions(sailfishsilica PRIVATE SAILFISH_SILICA_BUILD_LIBRARY)
+target_compile_definitions(sailfishsilica PRIVATE SAILFISH_SILICA_BUILD_LIBRARY UNIT_TEST)
 
 # Install rules for the library
 install(TARGETS sailfishsilica

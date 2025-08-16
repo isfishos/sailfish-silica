@@ -24,19 +24,50 @@ static QImage colorizeMonochrome(QImage img, const QColor &color)
     if (img.format() != QImage::Format_ARGB32_Premultiplied) {
         img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
-    const uchar r = color.red();
-    const uchar g = color.green();
-    const uchar b = color.blue();
+
+    const uchar hr = color.red();
+    const uchar hg = color.green();
+    const uchar hb = color.blue();
+    const uchar ha = color.alpha();
+
+    // Create lookup table
+    // The algorithm uses the source pixel's alpha as an index into this table
+    QRgb lookupTable[256];
+    for (int i = 0; i < 256; ++i) {
+        // Calculate colorized value based on alpha index
+        const uchar r = (uchar)((hr * i) / 255);
+        const uchar g = (uchar)((hg * i) / 255);
+        const uchar b = (uchar)((hb * i) / 255);
+        const uchar a = (uchar)((ha * i) / 255);
+        lookupTable[i] = qRgba(r, g, b, a);
+    }
+
     for (int y = 0; y < img.height(); ++y) {
         QRgb *scan = reinterpret_cast<QRgb *>(img.scanLine(y));
         for (int x = 0; x < img.width(); ++x) {
-            const int a = qAlpha(scan[x]);
-            scan[x] = qRgba(r, g, b, a);
+            const QRgb pixel = scan[x];
+            const uchar sa = qAlpha(pixel);
+
+            // If source alpha is 0, result should be transparent
+            if (sa == 0) {
+                scan[x] = qRgba(0, 0, 0, 0);
+                continue;
+            }
+
+            // Use the source alpha as an index into the lookup table
+            scan[x] = lookupTable[sa];
         }
     }
     return img;
 }
 }
+
+#ifdef UNIT_TEST
+QImage Silica::ImageProvider::colorize(QImage &image, QColor color)
+{
+    return colorizeMonochrome(image, color);
+}
+#endif
 
 ImageProvider::ImageProvider(InitFlags initFlags)
     : QQuickImageProvider(QQuickImageProvider::Texture)
