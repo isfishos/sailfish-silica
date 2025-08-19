@@ -23,6 +23,64 @@ void ApplicationBackground::complete()
     updateWallpaperWindow();
 }
 
+void ApplicationBackground::setWallpaper(const QJSValue &v)
+{
+    if ((m_wallpaper.isUndefined() && v.isUndefined()) || m_wallpaper.strictlyEquals(v)) {
+        return;
+    }
+    m_wallpaper = v;
+    emit wallpaperChanged();
+    emit patternChanged();
+    updateWallpaperWindow();
+}
+
+void ApplicationBackground::setImage(const QUrl &u)
+{
+    if (m_image == u)
+        return;
+    m_image = u;
+    emit imageChanged();
+    emit patternChanged();
+    updateWallpaperWindow();
+}
+
+void ApplicationBackground::setFilter(const QString &f)
+{
+    if (m_filter == f)
+        return;
+    m_filter = f;
+    m_explicitFilter = true;
+    emit filterChanged();
+    emit patternChanged();
+    updateWallpaperWindow();
+}
+
+void ApplicationBackground::setColor(const QColor &c)
+{
+    if (m_color == c)
+        return;
+    m_color = c;
+    emit colorChanged();
+    emit patternChanged();
+}
+
+void ApplicationBackground::setMaterial(const QString &m)
+{
+    if (m_material == m)
+        return;
+    m_material = m;
+    emit materialChanged();
+    emit patternChanged();
+}
+
+void ApplicationBackground::setWindowComponent(QQmlComponent *c)
+{
+    if (m_windowComponent == c)
+        return;
+    m_windowComponent = c;
+    emit windowComponentChanged();
+}
+
 void ApplicationBackground::updateWallpaperWindow()
 {
     if (!m_completed || !m_appWindow)

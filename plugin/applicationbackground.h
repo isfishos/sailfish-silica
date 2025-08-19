@@ -15,27 +15,27 @@ class QQuickWindow;
 class ApplicationBackground : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QJSValue wallpaper READ wallpaper WRITE setWallpaper NOTIFY patternChanged)
-    Q_PROPERTY(QUrl image READ image WRITE setImage NOTIFY patternChanged)
-    Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY patternChanged)
-    Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY patternChanged)
-    Q_PROPERTY(QString material READ material WRITE setMaterial NOTIFY patternChanged)
+    Q_PROPERTY(QJSValue wallpaper READ wallpaper WRITE setWallpaper NOTIFY wallpaperChanged)
+    Q_PROPERTY(QUrl image READ image WRITE setImage NOTIFY imageChanged)
+    Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
+    Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
+    Q_PROPERTY(QString material READ material WRITE setMaterial NOTIFY materialChanged)
     Q_PROPERTY(QQmlComponent* _windowComponent READ windowComponent WRITE setWindowComponent NOTIFY windowComponentChanged)
 public:
     explicit ApplicationBackground(QObject *parent = nullptr);
 
     QJSValue wallpaper() const { return m_wallpaper; }
-    void setWallpaper(const QJSValue &v) { m_wallpaper=v; emit patternChanged(); updateWallpaperWindow(); }
+    void setWallpaper(const QJSValue &v);
     QUrl image() const { return m_image; }
-    void setImage(const QUrl &u) { m_image=u; emit patternChanged(); updateWallpaperWindow(); }
+    void setImage(const QUrl &u);
     QString filter() const { return m_filter; }
-    void setFilter(const QString &f) { m_filter=f; m_explicitFilter=true; emit patternChanged(); updateWallpaperWindow(); }
+    void setFilter(const QString &f);
     QColor color() const { return m_color; }
-    void setColor(const QColor &c) { m_color=c; emit patternChanged(); }
+    void setColor(const QColor &c);
     QString material() const { return m_material; }
-    void setMaterial(const QString &m) { m_material=m; emit patternChanged(); }
+    void setMaterial(const QString &m);
     QQmlComponent* windowComponent() const { return m_windowComponent; }
-    void setWindowComponent(QQmlComponent *c) { m_windowComponent=c; emit windowComponentChanged(); }
+    void setWindowComponent(QQmlComponent *c);
 
     void setApplicationWindow(QQuickWindow *w);
     void complete();
@@ -44,6 +44,11 @@ public:
     bool explicitMaterial() const { return m_explicitMaterial; }
 
 Q_SIGNALS:
+    void wallpaperChanged();
+    void imageChanged();
+    void filterChanged();
+    void colorChanged();
+    void materialChanged();
     void patternChanged();
     void windowComponentChanged();
 
