@@ -7,13 +7,20 @@
 #include <QCoreApplication>
 
 DeclarativeWindow::DeclarativeWindow(QQuickItem *parent)
-    : QQuickItem(parent)
+    : Silica::Control(parent)
 {
     // Create background object
     m_background = new ApplicationBackground(this);
+    // Default device orientation to portrait to avoid undefined in QML
+    m_deviceOrientation = 1; // Orientation::Portrait
+    // Initialize effective orientation based on defaults
+    updateOrientation();
+
+    // Connect to window changes to emit our windowChanged signal
+    connect(this, &QQuickItem::windowChanged, this, &DeclarativeWindow::windowChanged);
 }
 
-QObject* DeclarativeWindow::background() const
+ApplicationBackground* DeclarativeWindow::background() const
 {
     return m_background;
 }
@@ -44,6 +51,7 @@ void DeclarativeWindow::setDeviceOrientation(int orientation)
     if (m_deviceOrientation != orientation) {
         m_deviceOrientation = orientation;
         emit deviceOrientationChanged();
+        updateOrientation();
     }
 }
 
@@ -52,6 +60,7 @@ void DeclarativeWindow::setAllowedOrientations(int orientations)
     if (m_allowedOrientations != orientations) {
         m_allowedOrientations = orientations;
         emit allowedOrientationsChanged();
+        updateOrientation();
     }
 }
 
@@ -157,7 +166,7 @@ void DeclarativeWindow::setWindowOpacity(qreal opacity)
 
 void DeclarativeWindow::activate()
 {
-    if (QQuickWindow *window = this->window()) {
+    if (QQuickWindow *window = QQuickItem::window()) {
         window->show();
         window->requestActivate();
     }
@@ -165,7 +174,7 @@ void DeclarativeWindow::activate()
 
 void DeclarativeWindow::deactivate()
 {
-    if (QQuickWindow *window = this->window()) {
+    if (QQuickWindow *window = QQuickItem::window()) {
         window->hide();
     }
 }
@@ -176,24 +185,22 @@ void DeclarativeWindow::_processPendingDeletions()
     QCoreApplication::processEvents();
 }
 
-void DeclarativeWindow::_selectOrientation(int allowed, int suggested)
+int DeclarativeWindow::_selectOrientation(int allowed, int suggested) const
 {
-    // Select the best orientation based on allowed and suggested
     int bestOrientation = 0;
-
     if (suggested >= 0 && (allowed & suggested)) {
         bestOrientation = suggested;
     } else {
-        // Find the first allowed orientation
+        // Orientation enum mask order: Portrait(1), Landscape(2), PortraitInverted(4), LandscapeInverted(8)
+        const int candidates[4] = { 1, 2, 4, 8 };
         for (int i = 0; i < 4; ++i) {
-            if (allowed & (1 << i)) {
-                bestOrientation = 1 << i;
+            if (allowed & candidates[i]) {
+                bestOrientation = candidates[i];
                 break;
             }
         }
     }
-
-    setOrientation(bestOrientation);
+    return bestOrientation;
 }
 
 void DeclarativeWindow::_setCover(QObject *cover)
@@ -217,7 +224,7 @@ void DeclarativeWindow::componentComplete()
     QQuickItem::componentComplete();
 
     // Connect to screen geometry changes
-    if (QQuickWindow *window = this->window()) {
+    if (QQuickWindow *window = QQuickItem::window()) {
         connect(window, &QQuickWindow::widthChanged, this, [this, window]() {
             m_backgroundRect = QRectF(0, 0, window->width(), window->height());
             emit backgroundRectChanged();
@@ -234,7 +241,7 @@ void DeclarativeWindow::componentComplete()
     });
 
     // Initialize background rect
-    if (QQuickWindow *window = this->window()) {
+    if (QQuickWindow *window = QQuickItem::window()) {
         m_backgroundRect = QRectF(0, 0, window->width(), window->height());
     }
 }
@@ -258,7 +265,7 @@ void DeclarativeWindow::updateOrientation()
 
 void DeclarativeWindow::updateWindowFlags()
 {
-    if (QQuickWindow *window = this->window()) {
+    if (QQuickWindow *window = QQuickItem::window()) {
         // Set window flags based on persistence hints
         Qt::WindowFlags flags = window->flags();
 
@@ -272,4 +279,9 @@ void DeclarativeWindow::updateWindowFlags()
 
         window->setFlags(flags);
     }
+}
+
+QWindow* DeclarativeWindow::window() const
+{
+    return QQuickItem::window();
 }

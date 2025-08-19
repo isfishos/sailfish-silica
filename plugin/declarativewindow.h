@@ -8,10 +8,11 @@
 #include <QWindow>
 #include <QColor>
 #include <QRectF>
+#include <silicacontrol.h>
 
 class ApplicationBackground;
 
-class DeclarativeWindow : public QQuickItem
+class DeclarativeWindow : public Silica::Control
 {
     Q_OBJECT
     Q_PROPERTY(int orientation READ orientation WRITE setOrientation NOTIFY orientationChanged)
@@ -20,7 +21,7 @@ class DeclarativeWindow : public QQuickItem
     Q_PROPERTY(int defaultAllowedOrientations READ defaultAllowedOrientations CONSTANT)
     Q_PROPERTY(int _allowedOrientations READ allowedOrientations WRITE setAllowedOrientations NOTIFY allowedOrientationsChanged)
     Q_PROPERTY(int screenRotation READ screenRotation CONSTANT)
-    Q_PROPERTY(QObject* background READ background CONSTANT)
+    Q_PROPERTY(ApplicationBackground* background READ background CONSTANT)
     Q_PROPERTY(bool _backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
     Q_PROPERTY(bool _opaque READ opaque WRITE setOpaque RESET resetOpaque NOTIFY opaqueChanged)
     Q_PROPERTY(bool _persistentOpenGLContext READ persistentOpenGLContext WRITE setPersistentOpenGLContext NOTIFY persistentOpenGLContextChanged)
@@ -33,6 +34,7 @@ class DeclarativeWindow : public QQuickItem
     Q_PROPERTY(QWindow* _mainWindow READ mainWindow WRITE setMainWindow NOTIFY mainWindowChanged)
     Q_PROPERTY(qreal _windowOpacity READ windowOpacity WRITE setWindowOpacity NOTIFY windowOpacityChanged)
     Q_PROPERTY(QRectF _backgroundRect READ backgroundRect NOTIFY backgroundRectChanged)
+    Q_PROPERTY(QWindow* window READ window NOTIFY windowChanged)
 
 public:
     explicit DeclarativeWindow(QQuickItem *parent = nullptr);
@@ -48,7 +50,7 @@ public:
     int allowedOrientations() const { return m_allowedOrientations; }
     void setAllowedOrientations(int orientations);
     int screenRotation() const { return 0; } // TODO: Implement actual screen rotation
-    QObject* background() const;
+    ApplicationBackground* background() const;
     bool backgroundVisible() const { return m_backgroundVisible; }
     void setBackgroundVisible(bool visible);
     bool opaque() const { return m_opaque; }
@@ -74,11 +76,12 @@ public:
     qreal windowOpacity() const { return m_windowOpacity; }
     void setWindowOpacity(qreal opacity);
     QRectF backgroundRect() const { return m_backgroundRect; }
+    QWindow* window() const;
 
     Q_INVOKABLE void activate();
     Q_INVOKABLE void deactivate();
     Q_INVOKABLE void _processPendingDeletions();
-    Q_INVOKABLE void _selectOrientation(int allowed, int suggested = -1);
+    Q_INVOKABLE int _selectOrientation(int allowed, int suggested = -1) const;
     Q_INVOKABLE void _setCover(QObject *cover);
     Q_INVOKABLE void _updateCoverVisibility();
 
@@ -100,6 +103,7 @@ Q_SIGNALS:
     void mainWindowChanged();
     void windowOpacityChanged();
     void backgroundRectChanged();
+    void windowChanged();
 
 protected:
     void componentComplete() override;
