@@ -26,6 +26,18 @@ DeclarativeCoverWindow::DeclarativeCoverWindow(QWindow *parent)
     setCoverSize(m_coverSize);
 }
 
+void DeclarativeCoverWindow::setMainWindow(QObject *w)
+{
+    QWindow *asWindow = qobject_cast<QWindow*>(w);
+    if (m_mainWindow == asWindow) {
+        return;
+    }
+
+    m_mainWindow = asWindow;
+    emit mainWindowChanged();
+    updateGeometry();
+}
+
 void DeclarativeCoverWindow::setCoverSize(const QSize &size)
 {
     if (m_coverSize != size) {
@@ -71,4 +83,9 @@ void DeclarativeCoverWindow::syncWithMainWindow()
             hide();
         }
     }
+}
+
+void DeclarativeCoverWindow::setContentSize(qreal w, qreal h)
+{
+    setCoverSize(QSize(qRound(w), qRound(h)));
 }
