@@ -24,3 +24,23 @@ DeclarativeConfigApi *DeclarativeConfigApi::instance()
     }
     return g_configInstance;
 }
+
+bool DeclarativeConfigApi::wayland() const
+{
+    return true;
+}
+
+bool DeclarativeConfigApi::desktop() const
+{
+    return true;
+}
+
+bool DeclarativeConfigApi::layoutGrid() const
+{
+    return false;
+}
+
+double DeclarativeConfigApi::sailfishVersion() const
+{
+    return 4.6; // placeholder
+}
