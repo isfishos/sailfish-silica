@@ -24,7 +24,9 @@ public:
     enum Status {
         Active,
         Inactive,
-        Updating
+        Updating,
+        Deactivating,
+        Activating
     };
     Q_ENUM(Status)
 

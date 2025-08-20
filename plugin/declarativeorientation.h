@@ -13,10 +13,14 @@ public:
     explicit DeclarativeOrientation(QObject *parent = nullptr);
 
     enum Orientation {
+        None = 0,
         Portrait = 1,
         Landscape = 2,
         PortraitInverted = 4,
-        LandscapeInverted = 8
+        LandscapeInverted = 8,
+        PortraitMask = Portrait | PortraitInverted,
+        LandscapeMask = Landscape | LandscapeInverted,
+        All = Portrait | Landscape | PortraitInverted | LandscapeInverted
     };
     Q_ENUM(Orientation)
     Q_DECLARE_FLAGS(Orientations, Orientation)

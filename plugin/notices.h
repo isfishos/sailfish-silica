@@ -44,10 +44,12 @@ private:
     bool m_empty;
 };
 
+Q_DECLARE_METATYPE(NoticeData)
+
 class Notices : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(NoticeData currentNotice READ currentNotice NOTIFY currentNoticeChanged)
+    Q_PROPERTY(NoticeData _currentNotice READ currentNotice NOTIFY currentNoticeChanged)
 
 public:
     explicit Notices(QObject *parent = nullptr);

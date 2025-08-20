@@ -3,13 +3,9 @@
 #ifndef SAILFISH_SILICA_PLUGIN_DECLARATIVEDRAGFILTER_H
 #define SAILFISH_SILICA_PLUGIN_DECLARATIVEDRAGFILTER_H
 
-#include <QObject>
+#include <QQuickItem>
 #include <QEvent>
 #include <QPointF>
-#include <Qt>
-
-class QQuickItem;
-class QQuickWindow;
 
 class DeclarativeDragFilter : public QObject
 {
@@ -55,5 +51,7 @@ private:
     bool m_tracking = false;
     static constexpr qreal DRAG_THRESHOLD = 10.0; // Platform drag threshold
 };
+
+QML_DECLARE_TYPEINFO(DeclarativeDragFilter, QML_HAS_ATTACHED_PROPERTIES)
 
 #endif // SAILFISH_SILICA_PLUGIN_DECLARATIVEDRAGFILTER_H

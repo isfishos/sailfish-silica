@@ -27,6 +27,9 @@ public:
     void setTarget(QQuickItem *target);
     QQmlListProperty<QQuickItem> excludeList();
 
+    // Return the computed dimmed region
+    QRegion region() const { return m_computedRegion; }
+
     // QQmlListProperty helpers
     static void appendExclude(QQmlListProperty<QQuickItem> *prop, QQuickItem *item);
     static int excludeCount(QQmlListProperty<QQuickItem> *prop);
