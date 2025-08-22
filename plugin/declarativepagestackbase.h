@@ -6,11 +6,12 @@
 #include <QQuickItem>
 #include <QPointF>
 #include <QSet>
+#include <silicacontrol.h>
 
-class DeclarativePageStackBase : public QQuickItem
+class DeclarativePageStackBase : public Silica::Control
 {
     Q_OBJECT
-    Q_PROPERTY(bool pressed READ pressed NOTIFY pressedChanged)
+    Q_PROPERTY(bool pressed READ isPressed NOTIFY pressedChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(int depth READ depth WRITE setDepth NOTIFY depthChanged)
     Q_PROPERTY(bool backNavigation READ backNavigation WRITE setBackNavigation NOTIFY backNavigationChanged)
@@ -21,7 +22,7 @@ class DeclarativePageStackBase : public QQuickItem
     Q_PROPERTY(qreal _rightFlickDifference READ rightFlickDifference NOTIFY rightFlickDifferenceChanged)
     Q_PROPERTY(qreal _upFlickDifference READ upFlickDifference NOTIFY upFlickDifferenceChanged)
     Q_PROPERTY(qreal _downFlickDifference READ downFlickDifference NOTIFY downFlickDifferenceChanged)
-    Q_PROPERTY(int _ongoingTransitionCount READ ongoingTransitionCount NOTIFY ongoingTransitionCountChanged)
+    Q_PROPERTY(int _ongoingTransitionCount READ ongoingTransitionCount WRITE setOngoingTransitionCount NOTIFY ongoingTransitionCountChanged)
     Q_PROPERTY(QQuickItem* _currentContainer READ currentContainer WRITE setCurrentContainer NOTIFY currentContainerChanged)
     Q_PROPERTY(QQuickItem* currentPage READ currentPage WRITE setCurrentPage NOTIFY currentPageChanged)
     Q_PROPERTY(bool _noGrabbing READ noGrabbing WRITE setNoGrabbing NOTIFY noGrabbingChanged)
@@ -29,7 +30,7 @@ class DeclarativePageStackBase : public QQuickItem
 public:
     explicit DeclarativePageStackBase(QQuickItem *parent = nullptr);
 
-    bool pressed() const { return m_pressed; }
+    bool isPressed() const { return m_pressed; }
     bool busy() const { return m_busy; }
     int depth() const { return m_depth; }
     void setDepth(int depth);
@@ -45,6 +46,17 @@ public:
     qreal upFlickDifference() const { return m_upFlickDifference; }
     qreal downFlickDifference() const { return m_downFlickDifference; }
     int ongoingTransitionCount() const { return m_ongoingTransitionCount; }
+    void setOngoingTransitionCount(int c) {
+        if (m_ongoingTransitionCount != c) {
+            m_ongoingTransitionCount = c;
+            emit ongoingTransitionCountChanged();
+            const bool newBusy = (m_ongoingTransitionCount > 0);
+            if (m_busy != newBusy) {
+                m_busy = newBusy;
+                emit busyChanged();
+            }
+        }
+    }
     QQuickItem* currentContainer() const { return m_currentContainer; }
     void setCurrentContainer(QQuickItem *container);
     QQuickItem* currentPage() const { return m_currentPage; }
@@ -60,6 +72,7 @@ public:
 
 Q_SIGNALS:
     void pressedChanged();
+    void pressed(); // Signal emitted when the item is first pressed
     void busyChanged();
     void depthChanged();
     void backNavigationChanged();

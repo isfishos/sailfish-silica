@@ -9,7 +9,7 @@
 #include <QDir>
 
 DeclarativePageStackBase::DeclarativePageStackBase(QQuickItem *parent)
-    : QQuickItem(parent)
+    : Silica::Control(parent)
 {
     setAcceptedMouseButtons(Qt::LeftButton);
     setFocus(true);
@@ -77,6 +77,7 @@ void DeclarativePageStackBase::handlePress(const QPointF &pos)
     m_pressPos = pos;
     m_lastPos = pos;
     m_pressed = true;
+    emit pressed();
     emit pressedChanged();
 }
 
@@ -208,27 +209,18 @@ void DeclarativePageStackBase::checkNavigationThreshold()
     }
 
     if (shouldNavigate && !m_busy) {
-        m_busy = true;
-        emit busyChanged();
         incrementTransitionCount();
     }
 }
 
 void DeclarativePageStackBase::incrementTransitionCount()
 {
-    m_ongoingTransitionCount++;
-    emit ongoingTransitionCountChanged();
+    setOngoingTransitionCount(m_ongoingTransitionCount + 1);
 }
 
 void DeclarativePageStackBase::decrementTransitionCount()
 {
     if (m_ongoingTransitionCount > 0) {
-        m_ongoingTransitionCount--;
-        emit ongoingTransitionCountChanged();
-
-        if (m_ongoingTransitionCount == 0) {
-            m_busy = false;
-            emit busyChanged();
-        }
+        setOngoingTransitionCount(m_ongoingTransitionCount - 1);
     }
 }
