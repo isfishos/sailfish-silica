@@ -122,11 +122,17 @@ public:
 
             // Public singletons
             qmlRegisterSingletonType<Silica::Theme>(uri, 1, 0, "Theme",
-                [](QQmlEngine*, QJSEngine*) -> QObject* { return Silica::Theme::instance(); });
+                [](QQmlEngine*, QJSEngine*) -> QObject* { return new Silica::Theme; });
             qmlRegisterSingletonType<Silica::Screen>(uri, 1, 0, "Screen",
-                [](QQmlEngine*, QJSEngine*) -> QObject* { return Silica::Screen::instance(); });
+                [](QQmlEngine*, QJSEngine*) -> QObject* { return new Silica::Screen; });
             qmlRegisterSingletonType<Notices>(uri, 1, 0, "Notices",
-                [](QQmlEngine*, QJSEngine*) -> QObject* { return Notices::instance(); });
+                [](QQmlEngine*, QJSEngine*) -> QObject* { return new Notices; });
+            qmlRegisterSingletonType<DeclarativeClipboard>(uri, 1, 0, "Clipboard",
+                [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeClipboard; });
+            qmlRegisterSingletonType<DeclarativeStandardPaths>(uri, 1, 0, "StandardPaths",
+                [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeStandardPaths; });
+            qmlRegisterSingletonType<DeclarativeUtil>(uri, 1, 0, "Util",
+                [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeUtil; });
 
             // Register meta types for QML property handling
             qRegisterMetaType<NoticeData>("NoticeData");
@@ -150,14 +156,6 @@ public:
             // Attached-only auto scroll helpers
             qmlRegisterUncreatableType<HorizontalAutoScroll>(uri, 1, 0, "HorizontalAutoScroll", "Attached-only");
             qmlRegisterUncreatableType<VerticalAutoScroll>(uri, 1, 0, "VerticalAutoScroll", "Attached-only");
-
-            // Public singleton types
-            qmlRegisterSingletonType<DeclarativeClipboard>(uri, 1, 0, "Clipboard",
-                [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeClipboard; });
-            qmlRegisterSingletonType<DeclarativeStandardPaths>(uri, 1, 0, "StandardPaths",
-                [](QQmlEngine*, QJSEngine*) -> QObject* { return DeclarativeStandardPaths::instance(); });
-            qmlRegisterSingletonType<DeclarativeUtil>(uri, 1, 0, "Util",
-                [](QQmlEngine*, QJSEngine*) -> QObject* { return DeclarativeUtil::instance(); });
 
         } else if (strcmp(uri, "Sailfish.Silica.private") == 0) {
             // Private API types
