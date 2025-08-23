@@ -7,12 +7,14 @@
 #include <QQmlContext>
 #include <QStandardPaths>
 #include <QDir>
+#include <QQuickWindow>
 
 DeclarativePageStackBase::DeclarativePageStackBase(QQuickItem *parent)
     : Silica::Control(parent)
 {
     setAcceptedMouseButtons(Qt::LeftButton);
     setFocus(true);
+    setFiltersChildMouseEvents(true);
 }
 
 void DeclarativePageStackBase::setDepth(int depth)
@@ -39,7 +41,7 @@ void DeclarativePageStackBase::setForwardNavigation(bool enabled)
     }
 }
 
-void DeclarativePageStackBase::setNavigationStyle(int style)
+void DeclarativePageStackBase::setNavigationStyle(DeclarativePageNavigation::Style style)
 {
     if (m_navigationStyle != style) {
         m_navigationStyle = style;
@@ -72,19 +74,20 @@ void DeclarativePageStackBase::setNoGrabbing(bool noGrabbing)
     }
 }
 
-void DeclarativePageStackBase::handlePress(const QPointF &pos)
+bool DeclarativePageStackBase::handlePress(const QPointF &pos)
 {
     m_pressPos = pos;
     m_lastPos = pos;
     m_pressed = true;
     emit pressed();
     emit pressedChanged();
+    return true; // Indicate we can handle the press
 }
 
-void DeclarativePageStackBase::handleMove(const QPointF &pos)
+bool DeclarativePageStackBase::handleMove(const QPointF &pos)
 {
     if (!m_pressed) {
-        return;
+        return false;
     }
 
     QPointF delta = pos - m_lastPos;
@@ -92,6 +95,7 @@ void DeclarativePageStackBase::handleMove(const QPointF &pos)
     m_lastPos = pos;
 
     checkNavigationThreshold();
+    return m_grabbed; // Return true if we've grabbed the mouse
 }
 
 void DeclarativePageStackBase::handleRelease()
@@ -109,51 +113,100 @@ QString DeclarativePageStackBase::resolveImportPage(const QString &page)
         return QString();
     }
 
-    // Check if we've already visited this page to prevent import cycles
-    if (m_visitedPages.contains(page)) {
-        return QString();
-    }
-
-    m_visitedPages.insert(page);
-
-    // TODO: Implement proper import path resolution using DeclarativeStandardPaths
-    // For now, return a simple path
-    return page;
+    // Use the standard paths to resolve the import
+    return m_stdPaths.resolveImport(page);
 }
 
 void DeclarativePageStackBase::_grabMouse()
 {
     grabMouse();
+    setKeepMouseGrab(true);
+    m_grabbed = true;
 }
 
 void DeclarativePageStackBase::mousePressEvent(QMouseEvent *event)
 {
-    if (!m_noGrabbing) {
-        handlePress(event->pos());
-        event->accept();
-    } else {
-        QQuickItem::mousePressEvent(event);
-    }
+    handleMouse(event);
 }
 
 void DeclarativePageStackBase::mouseMoveEvent(QMouseEvent *event)
 {
-    if (!m_noGrabbing && m_pressed) {
-        handleMove(event->pos());
-        event->accept();
-    } else {
-        QQuickItem::mouseMoveEvent(event);
-    }
+    handleMouse(event);
 }
 
 void DeclarativePageStackBase::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (!m_noGrabbing) {
-        handleRelease();
-        event->accept();
-    } else {
-        QQuickItem::mouseReleaseEvent(event);
+    handleMouse(event);
+}
+
+void DeclarativePageStackBase::mouseUngrabEvent()
+{
+    // Reset state when grab is lost
+    m_capture = false;
+    m_grabbed = false;
+    m_verticalBlock = false;
+    if (m_pressed) {
+        m_pressed = false;
+        emit pressedChanged();
+        emit canceled();
     }
+    setKeepMouseGrab(false);
+    m_navigatingLeft = false;
+    m_navigatingRight = false;
+    m_navigatingUp = false;
+    m_navigatingDown = false;
+    setLeftFlickDifference(0.0);
+    setRightFlickDifference(0.0);
+    setUpFlickDifference(0.0);
+    setDownFlickDifference(0.0);
+}
+
+bool DeclarativePageStackBase::childMouseEventFilter(QQuickItem *, QEvent *event)
+{
+    switch (event->type()) {
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseMove:
+    case QEvent::MouseButtonRelease:
+        return handleMouse(static_cast<QMouseEvent *>(event));
+    case QEvent::UngrabMouse:
+        if (window() && window()->mouseGrabberItem() && window()->mouseGrabberItem() != this) {
+            mouseUngrabEvent();
+        }
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
+bool DeclarativePageStackBase::handleMouse(QMouseEvent *mouseEvent)
+{
+    if (mouseEvent->type() == QEvent::MouseButtonRelease) {
+        handleRelease();
+        return false;
+    }
+    if (m_currentContainer && m_currentPage && isVisible()) {
+        if (QQuickItem *parent_ = parentItem()) {
+            switch (mouseEvent->type()) {
+            case QEvent::MouseButtonPress:
+            case QEvent::MouseMove: {
+                QPointF pos = parent_->mapFromScene(mouseEvent->windowPos());
+                pos += m_currentContainer->position();
+                pos = QQuickItem::mapToItem(m_currentPage, pos);
+                if (mouseEvent->type() == QEvent::MouseButtonPress) {
+                    handlePress(pos);
+                } else {
+                    handleMove(pos);
+                    return m_grabbed;
+                }
+                break;
+            }
+            default:
+                break;
+            }
+        }
+    }
+    return false;
 }
 
 void DeclarativePageStackBase::keyReleaseEvent(QKeyEvent *event)
@@ -171,13 +224,13 @@ void DeclarativePageStackBase::keyReleaseEvent(QKeyEvent *event)
 
 void DeclarativePageStackBase::updateFlickDifferences(const QPointF &delta)
 {
-    if (m_navigationStyle == 0) { // Horizontal
+    if (m_navigationStyle == DeclarativePageNavigation::Horizontal) {
         if (delta.x() > 0) {
             m_rightFlickDifference += delta.x();
-            emit rightFlickDifferenceChanged();
+            emit forwardFlickDifferenceChanged();
         } else {
             m_leftFlickDifference += qAbs(delta.x());
-            emit leftFlickDifferenceChanged();
+            emit backFlickDifferenceChanged();
         }
     } else { // Vertical
         if (delta.y() > 0) {
@@ -194,7 +247,7 @@ void DeclarativePageStackBase::checkNavigationThreshold()
 {
     bool shouldNavigate = false;
 
-    if (m_navigationStyle == 0) { // Horizontal
+    if (m_navigationStyle == DeclarativePageNavigation::Horizontal) {
         if (m_leftFlickDifference > NAVIGATION_THRESHOLD && m_backNavigation) {
             shouldNavigate = true;
         } else if (m_rightFlickDifference > NAVIGATION_THRESHOLD && m_forwardNavigation) {
@@ -223,4 +276,61 @@ void DeclarativePageStackBase::decrementTransitionCount()
     if (m_ongoingTransitionCount > 0) {
         setOngoingTransitionCount(m_ongoingTransitionCount - 1);
     }
+}
+
+void DeclarativePageStackBase::setLeftFlickDifference(qreal difference)
+{
+    if (m_leftFlickDifference != difference) {
+        m_leftFlickDifference = difference;
+        emit backFlickDifferenceChanged();
+    }
+}
+
+void DeclarativePageStackBase::setRightFlickDifference(qreal difference)
+{
+    if (m_rightFlickDifference != difference) {
+        m_rightFlickDifference = difference;
+        emit forwardFlickDifferenceChanged();
+    }
+}
+
+void DeclarativePageStackBase::setUpFlickDifference(qreal difference)
+{
+    if (m_upFlickDifference != difference) {
+        m_upFlickDifference = difference;
+        emit upFlickDifferenceChanged();
+    }
+}
+
+void DeclarativePageStackBase::setDownFlickDifference(qreal difference)
+{
+    if (m_downFlickDifference != difference) {
+        m_downFlickDifference = difference;
+        emit downFlickDifferenceChanged();
+    }
+}
+
+bool DeclarativePageStackBase::isMouseGrabbed()
+{
+    return m_grabbed;
+}
+
+void DeclarativePageStackBase::reset()
+{
+    m_capture = false;
+    m_grabbed = false;
+    m_verticalBlock = false;
+    if (m_pressed) {
+        m_pressed = false;
+        emit pressedChanged();
+    }
+    setKeepMouseGrab(false);
+    m_navigatingLeft = false;
+    m_navigatingRight = false;
+    m_navigatingUp = false;
+    m_navigatingDown = false;
+    setLeftFlickDifference(0.0);
+    setRightFlickDifference(0.0);
+    setUpFlickDifference(0.0);
+    setDownFlickDifference(0.0);
 }
