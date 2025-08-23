@@ -281,13 +281,21 @@ void AnimatedLoader::replaceItem(QQuickItem *item)
             m_animatingReplace = false;
             bool transitioning = m_transitioning;
             m_transitioning = m_loadQueued;
-            if (m_replacedItem) { m_replacedItem->setVisible(false); m_replacedItem->deleteLater(); m_replacedItem = nullptr; emit replacedItemChanged(); }
+            if (m_replacedItem) {
+                QQuickItemPrivate::get(m_replacedItem)->setCulled(true);
+                m_replacedItem->deleteLater();
+                m_replacedItem = nullptr;
+                emit replacedItemChanged();
+            }
             if (transitioning && !m_transitioning) { emit transitioningChanged(); emit transitionComplete(); }
         }
     } else {
         bool transitioning = m_transitioning;
         m_transitioning = m_loadQueued;
-        if (m_item) { m_item->setVisible(false); m_item->deleteLater(); }
+        if (m_item) {
+            QQuickItemPrivate::get(m_item)->setCulled(true);
+            m_item->deleteLater();
+        }
         m_item = item;
         emit itemChanged();
         if (transitioning && !m_transitioning) { emit transitioningChanged(); emit transitionComplete(); }
