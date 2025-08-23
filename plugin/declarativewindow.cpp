@@ -2,9 +2,14 @@
 
 #include "declarativewindow.h"
 #include "applicationbackground.h"
+#include "declarativeorientation.h"
+#include "silicascreen.h"
 #include <QQuickWindow>
 #include <QWindow>
 #include <QCoreApplication>
+#include <QGuiApplication>
+#include <QScreen>
+#include <QDebug>
 
 DeclarativeWindow::DeclarativeWindow(QQuickItem *parent)
     : Silica::Control(parent)
@@ -12,12 +17,24 @@ DeclarativeWindow::DeclarativeWindow(QQuickItem *parent)
     // Create background object
     m_background = new ApplicationBackground(this);
     // Default device orientation to portrait to avoid undefined in QML
-    m_deviceOrientation = 1; // Orientation::Portrait
+    m_deviceOrientation = DeclarativeOrientation::Portrait;
     // Initialize effective orientation based on defaults
     updateOrientation();
 
+    // Set initial size from screen dimensions (like original implementation)
+    if (QScreen *screen = QGuiApplication::primaryScreen()) {
+        setSize(screen->size());
+        // Connect to screen geometry changes like original implementation
+        connect(screen, &QScreen::geometryChanged, this, [this](const QRect &geometry) {
+            setSize(geometry.size());
+        });
+    } else {
+        setSize(QSizeF(540, 960));
+    }
+
     // Connect to window changes to emit our windowChanged signal
     connect(this, &QQuickItem::windowChanged, this, &DeclarativeWindow::windowChanged);
+    connect(this, &QQuickItem::windowChanged, this, &DeclarativeWindow::onWindowChanged);
 }
 
 ApplicationBackground* DeclarativeWindow::background() const
@@ -25,11 +42,62 @@ ApplicationBackground* DeclarativeWindow::background() const
     return m_background;
 }
 
+qreal DeclarativeWindow::width() const
+{
+    if (QQuickWindow *w = QQuickItem::window()) {
+        return w->width();
+    }
+    return QQuickItem::width();
+}
+
+void DeclarativeWindow::setWidth(qreal width)
+{
+    if (QQuickWindow *w = QQuickItem::window()) {
+        if (w->width() != width) {
+            w->setWidth(width);
+            emit widthChanged();
+        }
+    }
+}
+
+qreal DeclarativeWindow::height() const
+{
+    if (QQuickWindow *w = QQuickItem::window()) {
+        return w->height();
+    }
+    return QQuickItem::height();
+}
+
+void DeclarativeWindow::setHeight(qreal height)
+{
+    if (QQuickWindow *w = QQuickItem::window()) {
+        if (w->height() != height) {
+            w->setHeight(height);
+            emit heightChanged();
+        }
+    }
+}
+
 void DeclarativeWindow::setOrientation(int orientation)
 {
     if (m_orientation != orientation) {
         m_orientation = orientation;
+        // Inform QML/scene about content orientation change
+        if (QQuickWindow *w = QQuickItem::window()) {
+            Qt::ScreenOrientation o = Qt::PrimaryOrientation;
+            switch (m_orientation) {
+            case 1: o = Qt::PortraitOrientation; break; // DeclarativeOrientation::Portrait
+            case 2: o = Qt::LandscapeOrientation; break; // DeclarativeOrientation::Landscape
+            case 4: o = Qt::InvertedPortraitOrientation; break;
+            case 8: o = Qt::InvertedLandscapeOrientation; break;
+            default: break;
+            }
+            w->reportContentOrientationChange(o);
+        }
         emit orientationChanged();
+
+        // Update window size when orientation changes
+        updateWindowSize();
     }
 }
 
@@ -179,6 +247,14 @@ void DeclarativeWindow::deactivate()
     }
 }
 
+int DeclarativeWindow::screenRotation() const
+{
+    // For desktop landscape monitors (1920x1080), Screen reports 1080x1920 (portrait-first)
+    // Content needs to be rotated 90 degrees to get effective landscape dimensions
+    // This matches the original library's behavior
+    return 90;
+}
+
 void DeclarativeWindow::_processPendingDeletions()
 {
     // Process any pending deletions
@@ -243,7 +319,24 @@ void DeclarativeWindow::componentComplete()
     // Initialize background rect
     if (QQuickWindow *window = QQuickItem::window()) {
         m_backgroundRect = QRectF(0, 0, window->width(), window->height());
+        // Default device orientation from window aspect on desktop
+        if (window->width() >= window->height()) {
+            // Orientation::Landscape = 2
+            if (m_deviceOrientation != 2) {
+                m_deviceOrientation = 2;
+                emit deviceOrientationChanged();
+            }
+        } else {
+            // Orientation::Portrait = 1
+            if (m_deviceOrientation != 1) {
+                m_deviceOrientation = 1;
+                emit deviceOrientationChanged();
+            }
+        }
     }
+
+    // Ensure orientation is fully resolved after completion
+    updateOrientation();
 }
 
 void DeclarativeWindow::updateOrientation()
@@ -251,12 +344,16 @@ void DeclarativeWindow::updateOrientation()
     // Update orientation based on device orientation and allowed orientations
     int newOrientation = m_deviceOrientation & m_allowedOrientations;
     if (newOrientation == 0) {
-        // If no orientation matches, use the first allowed one
-        for (int i = 0; i < 4; ++i) {
-            if (m_allowedOrientations & (1 << i)) {
-                newOrientation = 1 << i;
-                break;
-            }
+        // If no orientation matches, prefer landscape over portrait for wide screens
+        // Check in priority order: Landscape, LandscapeInverted, Portrait, PortraitInverted
+        if (m_allowedOrientations & DeclarativeOrientation::Landscape) {
+            newOrientation = DeclarativeOrientation::Landscape;
+        } else if (m_allowedOrientations & DeclarativeOrientation::LandscapeInverted) {
+            newOrientation = DeclarativeOrientation::LandscapeInverted;
+        } else if (m_allowedOrientations & DeclarativeOrientation::Portrait) {
+            newOrientation = DeclarativeOrientation::Portrait;
+        } else if (m_allowedOrientations & DeclarativeOrientation::PortraitInverted) {
+            newOrientation = DeclarativeOrientation::PortraitInverted;
         }
     }
 
@@ -279,6 +376,33 @@ void DeclarativeWindow::updateWindowFlags()
 
         window->setFlags(flags);
     }
+}
+
+void DeclarativeWindow::onWindowChanged()
+{
+    static QQuickWindow *previousWindow = nullptr;
+
+    if (previousWindow) {
+        // Disconnect from previous window
+        disconnect(previousWindow, &QQuickWindow::widthChanged, this, &DeclarativeWindow::widthChanged);
+        disconnect(previousWindow, &QQuickWindow::heightChanged, this, &DeclarativeWindow::heightChanged);
+    }
+
+    if (QQuickWindow *w = QQuickItem::window()) {
+        // Connect to new window size changes
+        connect(w, &QQuickWindow::widthChanged, this, &DeclarativeWindow::widthChanged);
+        connect(w, &QQuickWindow::heightChanged, this, &DeclarativeWindow::heightChanged);
+        previousWindow = w;
+
+        // Size the window based on screen dimensions and orientation
+        updateWindowSize();
+    }
+}
+
+void DeclarativeWindow::updateWindowSize()
+{
+    // Original implementation doesn't change the window size
+    // TODO: Implement window resizing logic when running on desktop
 }
 
 QWindow* DeclarativeWindow::window() const

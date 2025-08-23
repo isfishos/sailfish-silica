@@ -15,6 +15,8 @@ class ApplicationBackground;
 class DeclarativeWindow : public Silica::Control
 {
     Q_OBJECT
+    Q_PROPERTY(qreal width READ width WRITE setWidth NOTIFY widthChanged)
+    Q_PROPERTY(qreal height READ height WRITE setHeight NOTIFY heightChanged)
     Q_PROPERTY(int orientation READ orientation WRITE setOrientation NOTIFY orientationChanged)
     Q_PROPERTY(int _pageOrientation READ pageOrientation WRITE setPageOrientation RESET resetPageOrientation NOTIFY pageOrientationChanged)
     Q_PROPERTY(int deviceOrientation READ deviceOrientation WRITE setDeviceOrientation NOTIFY deviceOrientationChanged)
@@ -39,6 +41,10 @@ class DeclarativeWindow : public Silica::Control
 public:
     explicit DeclarativeWindow(QQuickItem *parent = nullptr);
 
+    qreal width() const;
+    void setWidth(qreal width);
+    qreal height() const;
+    void setHeight(qreal height);
     int orientation() const { return m_orientation; }
     void setOrientation(int orientation);
     int pageOrientation() const { return m_pageOrientation; }
@@ -49,7 +55,7 @@ public:
     int defaultAllowedOrientations() const { return 0x0F; } // All orientations
     int allowedOrientations() const { return m_allowedOrientations; }
     void setAllowedOrientations(int orientations);
-    int screenRotation() const { return 0; } // TODO: Implement actual screen rotation
+    int screenRotation() const;
     ApplicationBackground* background() const;
     bool backgroundVisible() const { return m_backgroundVisible; }
     void setBackgroundVisible(bool visible);
@@ -86,6 +92,8 @@ public:
     Q_INVOKABLE void _updateCoverVisibility();
 
 Q_SIGNALS:
+    void widthChanged();
+    void heightChanged();
     void orientationChanged();
     void pageOrientationChanged();
     void deviceOrientationChanged();
@@ -111,6 +119,9 @@ protected:
 private:
     void updateOrientation();
     void updateWindowFlags();
+    void updateWindowSize();
+    void onWindowChanged();
+    void reportWindowOrientation();
 
     int m_orientation = 0;
     int m_pageOrientation = -1;
