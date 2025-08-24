@@ -25,6 +25,18 @@ ThemePrivate::ThemePrivate()
     , m_pixelRatio(-1.0)
     , m_fontFamilyHeading("Sail Sans Pro Light")
     , m_fontFamily("Sail Sans Pro Light")
+    // Default theme colors for LightOnDark scheme
+    , m_highlightColor(0, 191, 255)  // Light blue default highlight
+    , m_highlightBackgroundColor(0, 191, 255, 77)  // Semi-transparent highlight
+    , m_highlightDimmerColor(0, 191, 255, 127)  // Dimmer highlight
+    , m_primaryColor(255, 255, 255)  // White text
+    , m_secondaryColor(186, 186, 186)  // Light gray secondary text
+    , m_overlayBackgroundColor(0, 0, 0, 204)  // Semi-transparent black overlay
+    , m_secondaryHighlightColor(0, 153, 204)  // Darker highlight variant
+    , m_backgroundGlowColor(0, 191, 255, 102)  // Glow effect color
+    , m_errorColor(255, 85, 85)  // Red error color
+    , m_wallpaperOverlayColor(0, 0, 0, 153)  // Wallpaper overlay
+    , m_coverOverlayColor(0, 0, 0, 127)  // Cover overlay
     // GConf items
     , m_settings("/desktop/jolla/theme")
     , m_gcFontSizeCategory("/desktop/jolla/theme/font/sizeCategory")
@@ -477,8 +489,29 @@ Theme::ColorScheme Theme::colorScheme() const
 void Theme::setColorScheme(ColorScheme colorScheme)
 {
     if (m_private->m_colorScheme != colorScheme) {
+        ColorScheme oldScheme = m_private->m_colorScheme;
         m_private->m_colorScheme = colorScheme;
+
+        // Update primary and secondary colors based on the new scheme
+        if (colorScheme == LightOnDark) {
+            m_private->m_primaryColor = m_private->m_lightPrimaryColor;
+            m_private->m_secondaryColor = m_private->m_lightSecondaryColor;
+        } else {
+            m_private->m_primaryColor = m_private->m_darkPrimaryColor;
+            m_private->m_secondaryColor = m_private->m_darkSecondaryColor;
+        }
+
+        // Update highlight-related colors for the new scheme
+        m_private->m_secondaryHighlightColor = secondaryHighlightFromColor(m_private->m_highlightColor, colorScheme);
+        m_private->m_highlightBackgroundColor = highlightBackgroundFromColor(m_private->m_highlightColor, colorScheme);
+        m_private->m_highlightDimmerColor = highlightDimmerFromColor(m_private->m_highlightColor, colorScheme);
+
         emit colorSchemeChanged();
+        emit primaryColorChanged();
+        emit secondaryColorChanged();
+        emit secondaryHighlightColorChanged();
+        emit highlightBackgroundColorChanged();
+        emit highlightDimmerColorChanged();
     }
 }
 
@@ -681,7 +714,16 @@ void Theme::_setHighlightColor(QColor color)
 {
     if (m_private->m_highlightColor != color) {
         m_private->m_highlightColor = color;
+
+        // Update related highlight colors based on the new highlight color
+        m_private->m_secondaryHighlightColor = secondaryHighlightFromColor(color, m_private->m_colorScheme);
+        m_private->m_highlightBackgroundColor = highlightBackgroundFromColor(color, m_private->m_colorScheme);
+        m_private->m_highlightDimmerColor = highlightDimmerFromColor(color, m_private->m_colorScheme);
+
         emit highlightColorChanged();
+        emit secondaryHighlightColorChanged();
+        emit highlightBackgroundColorChanged();
+        emit highlightDimmerColorChanged();
     }
 }
 
