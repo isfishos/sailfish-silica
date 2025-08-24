@@ -105,6 +105,7 @@ ScreenPrivate::ScreenPrivate(QObject *parent)
         QSize size = primaryScreen->size();
         m_width = qMin(size.width(), size.height());
         m_height = qMax(size.width(), size.height());
+        m_widthRatio = qreal(m_width) / 540.0;
 
         // Calculate physical size
         QSizeF physicalSize = primaryScreen->physicalSize();
