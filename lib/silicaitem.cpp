@@ -19,6 +19,14 @@ AbstractItemPrivate::AbstractItemPrivate()
 
 AbstractItemPrivate::~AbstractItemPrivate()
 {
+    // Ensure we don't leave a dangling pointer in the parent control's children list.
+    // If this private object is being destroyed while still referenced by a ControlPrivate
+    // instance, remove the pointer from that list so the control won't later access freed
+    // memory during its own destruction.
+    if (m_control) {
+        m_control->children.removeAll(this);
+        m_control = nullptr;
+    }
 }
 
 void AbstractItemPrivate::setHighlighted(bool value, bool isExplicit)
