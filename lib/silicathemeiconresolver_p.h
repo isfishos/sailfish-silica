@@ -33,10 +33,11 @@ public:
 class ThemeIconResolverPrivate {
 public:
     qreal m_pixelRatio;
-    QHash<QString, IconInfo> cache;
+    mutable QHash<QString, IconInfo> cache;
     bool loadDefaultTheme;
 
     void addIconRoot(const QString &path);
+    void loadDefaultThemeRoots();
     const QList<ImageDirNode> &getImageDirNodes() const { return imageDirNodes; }
 
 private:
