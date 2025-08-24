@@ -45,14 +45,22 @@ bool PulleyMenuLogic::outOfBounds()
         return false;
     }
 
+    // Compute content offset relative to the flickable's originY so that
+    // pull-down/push-up distance matches the QML-side calculations which
+    // use flickable.originY as the baseline.
     qreal contentY = flick->property("contentY").toReal();
+    qreal originY = flick->property("originY").toReal();
+    qreal offset = contentY - originY;
     qreal threshold = 50.0; // Configurable threshold
 
     if (m_pullDownType) {
-        return contentY < -threshold;
+        // Pull-down: offset will be negative when pulled down from origin
+        return offset < -threshold;
     } else {
-        qreal maxContentY = flick->property("contentHeight").toReal() - flick->height();
-        return contentY > maxContentY + threshold;
+        qreal contentHeight = flick->property("contentHeight").toReal();
+        qreal maxContentY = contentHeight - flick->height();
+        qreal maxOffset = maxContentY - originY;
+        return offset > maxOffset + threshold;
     }
 }
 
@@ -66,10 +74,6 @@ void PulleyMenuLogic::monitorFlick()
     m_timer.start(16); // ~60fps
 }
 
-void PulleyMenuLogic::onFlickablePropertyChanged()
-{
-    updateDragDistance();
-}
 
 void PulleyMenuLogic::onTimerTimeout()
 {
@@ -103,16 +107,21 @@ void PulleyMenuLogic::updateDragDistance()
     }
 
     qreal contentY = flick->property("contentY").toReal();
+    qreal originY = flick->property("originY").toReal();
+    qreal offset = contentY - originY;
     qreal newDragDistance = 0.0;
 
     if (m_pullDownType) {
-        if (contentY < 0) {
-            newDragDistance = -contentY;
+        // When pulled down, offset is negative; drag distance is positive magnitude
+        if (offset < 0) {
+            newDragDistance = -offset;
         }
     } else {
-        qreal maxContentY = flick->property("contentHeight").toReal() - flick->height();
-        if (contentY > maxContentY) {
-            newDragDistance = contentY - maxContentY;
+        qreal contentHeight = flick->property("contentHeight").toReal();
+        qreal maxContentY = contentHeight - flick->height();
+        qreal maxOffset = maxContentY - originY;
+        if (offset > maxOffset) {
+            newDragDistance = offset - maxOffset;
         }
     }
 
@@ -133,5 +142,92 @@ void PulleyMenuLogic::connectToFlickable()
     if (flick) {
         connect(flick, &QQuickFlickable::contentYChanged, this, &PulleyMenuLogic::onFlickablePropertyChanged);
         connect(flick, &QQuickFlickable::draggingChanged, this, &PulleyMenuLogic::onFlickablePropertyChanged);
+
+        // Try to cache the associated PulleyMenu instance which the QML side
+        // assigns to flickable.pullDownMenu or flickable.pushUpMenu.
+        QVariant pd = flick->property("pullDownMenu");
+        if (pd.isValid() && pd.canConvert<QObject*>()) {
+            m_menu = pd.value<QObject*>();
+        } else {
+            QVariant pu = flick->property("pushUpMenu");
+            if (pu.isValid() && pu.canConvert<QObject*>())
+                m_menu = pu.value<QObject*>();
+        }
     }
 }
+
+void PulleyMenuLogic::onFlickablePropertyChanged()
+{
+    if (!m_flickable)
+        return;
+
+    // Prevent reentrant handling
+    if (m_inContentYHandler)
+        return;
+    m_inContentYHandler = true;
+
+    // If the QML menu indicates it's changing layout, skip activation handling
+    if (m_menu && m_menu->property("_changingListView").toBool()) {
+        m_inContentYHandler = false;
+        return;
+    }
+
+    // Update drag distance and notify listeners
+    updateDragDistance();
+
+    // Determine whether the menu should be active based on the flickable position
+    bool wasActive = false;
+    if (m_menu)
+        wasActive = m_menu->property("active").toBool();
+
+    bool shouldActivate = false;
+    if (m_menu && m_flickable) {
+        bool enabled = m_menu->property("enabled").toBool();
+        bool visible = m_menu->property("visible").toBool();
+        qreal contentY = m_flickable->property("contentY").toReal();
+        qreal inactivePos = m_menu->property("_inactivePosition").toReal();
+
+        if (enabled && visible) {
+            if (m_pullDownType) {
+                shouldActivate = contentY < inactivePos;
+            } else {
+                shouldActivate = contentY > inactivePos;
+            }
+        }
+    }
+
+    // Only activate if the user is actively dragging
+    bool dragging = m_flickable ? m_flickable->property("dragging").toBool() : false;
+    bool newActive = wasActive;
+    if (shouldActivate && dragging) {
+        newActive = true;
+    } else if (!shouldActivate) {
+        newActive = false;
+    }
+
+    if (m_menu && newActive != wasActive) {
+        m_menu->setProperty("active", newActive);
+    }
+
+    // Check for final position reached and notify
+    if (m_menu && m_flickable) {
+        qreal contentY = m_flickable->property("contentY").toReal();
+        qreal finalPos = m_menu->property("_finalPosition").toReal();
+        if (qAbs(contentY - finalPos) < 1.0) {
+            if (!m_atFinalPosition) {
+                m_atFinalPosition = true;
+                emit finalPositionReached();
+            }
+        } else {
+            m_atFinalPosition = false;
+        }
+    }
+
+    // Notify listeners that dragDistance changed
+    emit dragDistanceChanged();
+
+    m_firstMovement = false;
+    m_inContentYHandler = false;
+}
+
+#include "moc_pulleymenulogic.cpp"

@@ -6,6 +6,12 @@
 #include <QObject>
 #include <QQmlParserStatus>
 #include <QTimer>
+#include <QPointer>
+#include <QPointF>
+#include <QDebug>
+#include <QQuickWindow>
+#include <QPointer>
+#include <QCoreApplication>
 
 class QQuickFlickable;
 
@@ -22,7 +28,7 @@ public:
 
     bool pullDownType() const { return m_pullDownType; }
     void setPullDownType(bool pullDown);
-    QObject *flickable() const { return m_flickable; }
+    QObject *flickable() const { return m_flickable.data(); }
     void setFlickable(QObject *flickable);
     qreal dragDistance() const { return m_dragDistance; }
 
@@ -49,10 +55,17 @@ private:
     void connectToFlickable();
 
     bool m_pullDownType = true;
-    QObject *m_flickable = nullptr;
+    QPointer<QObject> m_flickable;
     qreal m_dragDistance = 0.0;
     QTimer m_timer;
     bool m_monitoring = false;
+    // Pointer to the owning PulleyMenu QML item (parent())
+    QPointer<QObject> m_menu;
+    bool m_firstMovement = true;
+    bool m_inContentYHandler = false;
+    bool m_atFinalPosition = false;
+    QPointer<QQuickWindow> m_windowProxy;
+    QPointF m_releasePos;
 };
 
 #endif // SAILFISH_SILICA_PLUGIN_PULLEYMENULOGIC_H
