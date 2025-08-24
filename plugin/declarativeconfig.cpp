@@ -32,7 +32,7 @@ bool DeclarativeConfigApi::wayland() const
 
 bool DeclarativeConfigApi::desktop() const
 {
-    return true;
+    return false;
 }
 
 bool DeclarativeConfigApi::layoutGrid() const
