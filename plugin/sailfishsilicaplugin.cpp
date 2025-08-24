@@ -2,6 +2,7 @@
 
 #include <QQmlExtensionPlugin>
 #include <QQmlEngine>
+#include <QQmlContext>
 
 #include "silicaitem.h"
 #include "silicacontrol.h"
@@ -131,8 +132,8 @@ public:
                 [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeClipboard; });
             qmlRegisterSingletonType<DeclarativeStandardPaths>(uri, 1, 0, "StandardPaths",
                 [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeStandardPaths; });
-            qmlRegisterSingletonType<DeclarativeUtil>(uri, 1, 0, "Util",
-                [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeUtil; });
+            qmlRegisterSingletonType<DeclarativeFormatter>(uri, 1, 0, "Format",
+                [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeFormatter; });
 
             // Register meta types for QML property handling
             qRegisterMetaType<NoticeData>("NoticeData");
@@ -152,6 +153,7 @@ public:
             qmlRegisterUncreatableType<DeclarativeTouchInteraction>(uri, 1, 0, "TouchInteraction", "Enums only");
             qmlRegisterUncreatableType<DeclarativeTruncationMode>(uri, 1, 0, "TruncationMode", "Enums only");
             qmlRegisterUncreatableType<DeclarativeCutoutMode>(uri, 1, 0, "CutoutMode", "Enums only");
+            qmlRegisterUncreatableType<QuickScrollDirection>(uri, 1, 0, "QuickScrollDirection", "Enums only");
 
             // Attached-only auto scroll helpers
             qmlRegisterUncreatableType<HorizontalAutoScroll>(uri, 1, 0, "HorizontalAutoScroll", "Attached-only");
@@ -208,15 +210,24 @@ public:
 
             // Private singletons
             qmlRegisterSingletonType<DeclarativeConfigApi>(uri, 1, 0, "Config",
-                [](QQmlEngine*, QJSEngine*) -> QObject* { return DeclarativeConfigApi::instance(); });
+                [](QQmlEngine* qml, QJSEngine*) -> QObject* { return new DeclarativeConfigApi(qml); });
+            qmlRegisterSingletonType<DeclarativeUtil>(uri, 1, 0, "Util",
+                [](QQmlEngine*, QJSEngine*) -> QObject* { return new DeclarativeUtil; });
         }
     }
 
     void initializeEngine(QQmlEngine *engine, const char *uri) override
     {
-        Q_UNUSED(uri)
+        if (strcmp(uri, "Sailfish.Silica") != 0) {
+            return;
+        }
+
         // Image provider for theme icons
         engine->addImageProvider("theme", new Silica::ImageProvider(Silica::ImageProvider::LoadDefaultTheme));
+
+        // Expose useful context properties for QML
+        engine->rootContext()->setContextProperty("screen", Silica::Screen::instance());
+        engine->rootContext()->setContextProperty("_defaultLabelFormat", Qt::PlainText);
     }
 };
 
