@@ -76,6 +76,7 @@ add_library(sailfishsilicaplugin SHARED
     verticalautoscroll.cpp
     verticalautoscroll.h
     wallpaperwindow.cpp
+    waylandblurmanager.cpp
 )
 
 target_link_libraries(sailfishsilicaplugin
@@ -84,6 +85,11 @@ target_link_libraries(sailfishsilicaplugin
     Qt5::Quick
     sailfishsilica
 )
+
+# Optionally link KWayland for blur behind effect
+if(KF5Wayland_FOUND)
+    target_link_libraries(sailfishsilicaplugin KF5::WaylandClient)
+endif()
 
 set_target_properties(sailfishsilicaplugin PROPERTIES
     OUTPUT_NAME sailfishsilicaplugin

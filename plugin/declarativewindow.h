@@ -11,6 +11,7 @@
 #include <silicacontrol.h>
 
 class ApplicationBackground;
+class WaylandBlurManager;
 
 class DeclarativeWindow : public Silica::Control
 {
@@ -146,6 +147,7 @@ private:
     qreal m_windowOpacity = 1.0;
     QRectF m_backgroundRect;
     ApplicationBackground *m_background = nullptr;
+    WaylandBlurManager *m_blurManager = nullptr;
 };
 
 #endif // SAILFISH_SILICA_PLUGIN_DECLARATIVEWINDOW_H

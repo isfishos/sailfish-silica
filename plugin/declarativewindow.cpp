@@ -4,6 +4,8 @@
 #include "applicationbackground.h"
 #include "declarativeorientation.h"
 #include "silicascreen.h"
+#include "silicatheme.h"
+#include "waylandblurmanager.h"
 #include <QQuickWindow>
 #include <QWindow>
 #include <QCoreApplication>
@@ -17,6 +19,9 @@ DeclarativeWindow::DeclarativeWindow(QQuickItem *parent)
 {
     // Create background object
     m_background = new ApplicationBackground(this);
+
+    // Create blur manager
+    m_blurManager = new WaylandBlurManager(this);
 
     // Initialize screen rotation based on primary screen orientation
     // For landscape-primary screens, we need 90° rotation to make portrait the "natural" orientation
@@ -415,11 +420,19 @@ void DeclarativeWindow::updateWindowFlags()
 
 void DeclarativeWindow::updateWindowProperties()
 {
-    QWindow * const window = QQuickItem::window();
+    QQuickWindow *window = QQuickItem::window();
     if (!window) return;
 
     QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
     if (!native) return;
+
+    // Set window background to semi-transparent black so compositor can blend it
+    // TODO: make this optional depending on compositor/environment
+    if (Silica::Theme::instance()->colorScheme() == Silica::Theme::LightOnDark) {
+        window->setColor(QColor(0, 0, 0, 127));
+    } else {
+        window->setColor(QColor(255, 255, 255, 127));
+    }
 
     // Only set properties for Wayland platform
     if (QGuiApplication::platformName().startsWith("wayland")) {
@@ -434,6 +447,11 @@ void DeclarativeWindow::updateWindowProperties()
                 native->setWindowProperty(handle, QStringLiteral("BACKGROUND_RECT"), m_backgroundRect);
             }
         }
+
+        // Setup blur behind effect for KWin (if available)
+        if (m_blurManager) {
+            m_blurManager->setupBlurBehind(window);
+        }
     }
 }
 
@@ -445,6 +463,11 @@ void DeclarativeWindow::onWindowChanged()
         // Disconnect from previous window
         disconnect(previousWindow, &QQuickWindow::widthChanged, this, &DeclarativeWindow::widthChanged);
         disconnect(previousWindow, &QQuickWindow::heightChanged, this, &DeclarativeWindow::heightChanged);
+
+        // Reset blur setup for new window
+        if (m_blurManager) {
+            m_blurManager->reset();
+        }
     }
 
     if (QQuickWindow *w = QQuickItem::window()) {

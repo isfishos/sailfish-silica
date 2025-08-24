@@ -13,6 +13,15 @@ find_package(Qt5 COMPONENTS Core Gui Quick Qml REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MLITE5 REQUIRED IMPORTED_TARGET mlite5)
 
+# Optional: Find KF5 Wayland for blur behind effect
+find_package(KF5Wayland QUIET)
+if(KF5Wayland_FOUND)
+    message(STATUS "KWayland found - enabling blur behind effect")
+    add_definitions(-DHAVE_KWAYLAND)
+else()
+    message(STATUS "KWayland not found - blur behind effect disabled")
+endif()
+
 # Set version
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 2)
