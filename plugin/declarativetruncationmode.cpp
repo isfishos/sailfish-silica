@@ -6,3 +6,5 @@ DeclarativeTruncationMode::DeclarativeTruncationMode(QObject *parent)
     : QObject(parent)
 {
 }
+
+#include "moc_declarativetruncationmode.cpp"
