@@ -180,6 +180,15 @@ PalettePrivate::~PalettePrivate()
 
 void PalettePrivate::updateColors()
 {
+    if (!m_explicitColorScheme) {
+        Theme::ColorScheme themeScheme = m_parent ? m_parent->m_colorScheme
+            : ThemePrivate::instance()->m_colorScheme;
+        if (m_colorScheme != themeScheme) {
+            setColorScheme(themeScheme, false);
+            return; // setColorScheme will call updateColors() again, so we're done
+        }
+    }
+
     // For each color index, if not explicitly set, derive value
     const ColorIndex allIndices[] = {
         ColorIndex::Primary,
@@ -212,6 +221,8 @@ Palette::Palette(QObject *parent)
     , d_ptr(new PalettePrivate)
 {
     d_ptr->q_ptr = this;  // Set back-pointer to public class
+    d_ptr->m_themeColors->addPalette(d_ptr.get());
+    d_ptr->updateColors();
 }
 
 Palette::~Palette()
