@@ -10,27 +10,60 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QDebug>
+#include <qpa/qplatformnativeinterface.h>
 
 DeclarativeWindow::DeclarativeWindow(QQuickItem *parent)
     : Silica::Control(parent)
 {
     // Create background object
     m_background = new ApplicationBackground(this);
-    // Default device orientation to portrait to avoid undefined in QML
-    m_deviceOrientation = DeclarativeOrientation::Portrait;
-    // Initialize effective orientation based on defaults
-    updateOrientation();
 
-    // Set initial size from screen dimensions (like original implementation)
+    // Initialize screen rotation based on primary screen orientation
+    // For landscape-primary screens, we need 90° rotation to make portrait the "natural" orientation
     if (QScreen *screen = QGuiApplication::primaryScreen()) {
+        Qt::ScreenOrientation primaryOrientation = screen->primaryOrientation();
+        if (primaryOrientation == Qt::LandscapeOrientation ||
+            primaryOrientation == Qt::InvertedLandscapeOrientation ||
+            (primaryOrientation == Qt::PrimaryOrientation && screen->size().width() > screen->size().height())) {
+            m_screenRotation = 90;  // Landscape-primary needs 90° compensation
+        } else {
+            m_screenRotation = 0;   // Portrait-primary needs no compensation
+        }
+    } else {
+        m_screenRotation = 0;
+    }
+
+    // Initialize device orientation from screen, similar to original
+    if (QScreen *screen = QGuiApplication::primaryScreen()) {
+        // Get initial device orientation from screen orientation
+        m_deviceOrientation = static_cast<int>(screen->orientation());
+        if (m_deviceOrientation == 0) {
+            // If screen reports no orientation, infer from geometry
+            m_deviceOrientation = (screen->size().width() > screen->size().height())
+                                 ? DeclarativeOrientation::Landscape
+                                 : DeclarativeOrientation::Portrait;
+        }
+
         setSize(screen->size());
         // Connect to screen geometry changes like original implementation
         connect(screen, &QScreen::geometryChanged, this, [this](const QRect &geometry) {
             setSize(geometry.size());
         });
+
+        // Connect to screen orientation changes to update device orientation
+        connect(screen, &QScreen::orientationChanged, this, [this](Qt::ScreenOrientation orientation) {
+            if (orientation != Qt::PrimaryOrientation) {
+                setDeviceOrientation(static_cast<int>(orientation));
+            }
+        });
     } else {
+        // Fallback for no screen
         setSize(QSizeF(540, 960));
+        m_deviceOrientation = DeclarativeOrientation::Portrait;
     }
+
+    // Initialize effective orientation based on device orientation and allowed orientations
+    updateOrientation();
 
     // Connect to window changes to emit our windowChanged signal
     connect(this, &QQuickItem::windowChanged, this, &DeclarativeWindow::windowChanged);
@@ -82,23 +115,27 @@ void DeclarativeWindow::setOrientation(int orientation)
 {
     if (m_orientation != orientation) {
         m_orientation = orientation;
-        // Inform QML/scene about content orientation change
-        if (QQuickWindow *w = QQuickItem::window()) {
-            Qt::ScreenOrientation o = Qt::PrimaryOrientation;
-            switch (m_orientation) {
-            case 1: o = Qt::PortraitOrientation; break; // DeclarativeOrientation::Portrait
-            case 2: o = Qt::LandscapeOrientation; break; // DeclarativeOrientation::Landscape
-            case 4: o = Qt::InvertedPortraitOrientation; break;
-            case 8: o = Qt::InvertedLandscapeOrientation; break;
-            default: break;
-            }
-            w->reportContentOrientationChange(o);
-        }
+
+        // Report content orientation to window system
+        reportContentOrientation(window(), orientation);
+
         emit orientationChanged();
 
         // Update window size when orientation changes
         updateWindowSize();
     }
+}
+
+void DeclarativeWindow::setExplicitOrientation(int orientation)
+{
+    m_explicitOrientation = true;
+    setOrientation(orientation);
+}
+
+void DeclarativeWindow::resetOrientation()
+{
+    m_explicitOrientation = false;
+    updateOrientation();
 }
 
 void DeclarativeWindow::setPageOrientation(int orientation)
@@ -249,10 +286,10 @@ void DeclarativeWindow::deactivate()
 
 int DeclarativeWindow::screenRotation() const
 {
-    // For desktop landscape monitors (1920x1080), Screen reports 1080x1920 (portrait-first)
-    // Content needs to be rotated 90 degrees to get effective landscape dimensions
-    // This matches the original library's behavior
-    return 90;
+    // Return the configured screen rotation value
+    // In original implementation, this could be configured via MGConf
+    // For desktop/non-Sailfish use, default to 0 (no rotation)
+    return m_screenRotation;
 }
 
 void DeclarativeWindow::_processPendingDeletions()
@@ -263,20 +300,11 @@ void DeclarativeWindow::_processPendingDeletions()
 
 int DeclarativeWindow::_selectOrientation(int allowed, int suggested) const
 {
-    int bestOrientation = 0;
-    if (suggested >= 0 && (allowed & suggested)) {
-        bestOrientation = suggested;
-    } else {
-        // Orientation enum mask order: Portrait(1), Landscape(2), PortraitInverted(4), LandscapeInverted(8)
-        const int candidates[4] = { 1, 2, 4, 8 };
-        for (int i = 0; i < 4; ++i) {
-            if (allowed & candidates[i]) {
-                bestOrientation = candidates[i];
-                break;
-            }
-        }
-    }
-    return bestOrientation;
+    // Handle the case where suggested == -1 by using device orientation
+    int effectiveSuggested = (suggested == -1) ? m_deviceOrientation : suggested;
+
+    // Delegate to selectOrientation with the effective suggested orientation
+    return selectOrientation(allowed, effectiveSuggested);
 }
 
 void DeclarativeWindow::_setCover(QObject *cover)
@@ -319,20 +347,6 @@ void DeclarativeWindow::componentComplete()
     // Initialize background rect
     if (QQuickWindow *window = QQuickItem::window()) {
         m_backgroundRect = QRectF(0, 0, window->width(), window->height());
-        // Default device orientation from window aspect on desktop
-        if (window->width() >= window->height()) {
-            // Orientation::Landscape = 2
-            if (m_deviceOrientation != 2) {
-                m_deviceOrientation = 2;
-                emit deviceOrientationChanged();
-            }
-        } else {
-            // Orientation::Portrait = 1
-            if (m_deviceOrientation != 1) {
-                m_deviceOrientation = 1;
-                emit deviceOrientationChanged();
-            }
-        }
     }
 
     // Ensure orientation is fully resolved after completion
@@ -341,23 +355,44 @@ void DeclarativeWindow::componentComplete()
 
 void DeclarativeWindow::updateOrientation()
 {
-    // Update orientation based on device orientation and allowed orientations
-    int newOrientation = m_deviceOrientation & m_allowedOrientations;
-    if (newOrientation == 0) {
-        // If no orientation matches, prefer landscape over portrait for wide screens
-        // Check in priority order: Landscape, LandscapeInverted, Portrait, PortraitInverted
-        if (m_allowedOrientations & DeclarativeOrientation::Landscape) {
-            newOrientation = DeclarativeOrientation::Landscape;
-        } else if (m_allowedOrientations & DeclarativeOrientation::LandscapeInverted) {
-            newOrientation = DeclarativeOrientation::LandscapeInverted;
-        } else if (m_allowedOrientations & DeclarativeOrientation::Portrait) {
-            newOrientation = DeclarativeOrientation::Portrait;
-        } else if (m_allowedOrientations & DeclarativeOrientation::PortraitInverted) {
-            newOrientation = DeclarativeOrientation::PortraitInverted;
+    // Follow original implementation logic for automatic orientation selection
+    // Only update if orientation is not explicitly set
+    if (!m_explicitOrientation) {
+        int selectedOrientation = selectOrientation(m_allowedOrientations, m_deviceOrientation);
+        setOrientation(selectedOrientation);
+    }
+
+    // Auto-set page orientation to match window orientation if not explicitly set by a page
+    // This matches the behavior seen in the original library
+    if (m_pageOrientation == -1) {
+        setPageOrientation(m_orientation);
+    }
+}
+
+int DeclarativeWindow::selectOrientation(int allowedOrientations, int deviceOrientation) const
+{
+    int selectedOrientation = DeclarativeOrientation::None;
+
+    // If the current device orientation is allowed, select that
+    if (allowedOrientations & deviceOrientation) {
+        selectedOrientation = deviceOrientation;
+    } else if (m_orientation & allowedOrientations) {
+        // If current orientation is still allowed, keep it
+        return m_orientation;
+    } else {
+        // Choose the first permissible orientation from the allowed set (in preference order)
+        if (allowedOrientations & DeclarativeOrientation::Portrait) {
+            selectedOrientation = DeclarativeOrientation::Portrait;
+        } else if (allowedOrientations & DeclarativeOrientation::Landscape) {
+            selectedOrientation = DeclarativeOrientation::Landscape;
+        } else if (allowedOrientations & DeclarativeOrientation::LandscapeInverted) {
+            selectedOrientation = DeclarativeOrientation::LandscapeInverted;
+        } else if (allowedOrientations & DeclarativeOrientation::PortraitInverted) {
+            selectedOrientation = DeclarativeOrientation::PortraitInverted;
         }
     }
 
-    setOrientation(newOrientation);
+    return selectedOrientation;
 }
 
 void DeclarativeWindow::updateWindowFlags()
@@ -375,6 +410,30 @@ void DeclarativeWindow::updateWindowFlags()
         }
 
         window->setFlags(flags);
+    }
+}
+
+void DeclarativeWindow::updateWindowProperties()
+{
+    QWindow * const window = QQuickItem::window();
+    if (!window) return;
+
+    QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
+    if (!native) return;
+
+    // Only set properties for Wayland platform
+    if (QGuiApplication::platformName().startsWith("wayland")) {
+        QPlatformWindow *handle = window->handle();
+        if (handle) {
+            native->setWindowProperty(handle, QStringLiteral("BACKGROUND_VISIBLE"), m_backgroundVisible);
+            native->setWindowProperty(handle, QStringLiteral("WINID"), window->winId());
+            native->setWindowProperty(handle, QStringLiteral("SAILFISH_HAVE_COVER"), m_haveCoverHint);
+            native->setWindowProperty(handle, QStringLiteral("WINDOW_OPACITY"), m_windowOpacity);
+
+            if (m_backgroundRect.isValid()) {
+                native->setWindowProperty(handle, QStringLiteral("BACKGROUND_RECT"), m_backgroundRect);
+            }
+        }
     }
 }
 
@@ -396,6 +455,15 @@ void DeclarativeWindow::onWindowChanged()
 
         // Size the window based on screen dimensions and orientation
         updateWindowSize();
+
+        // Set Wayland window properties for SailfishOS compositor
+        updateWindowProperties();
+
+        // Report current content orientation to window system
+        // This is critical for proper coordinate transformation
+        if (m_orientation != DeclarativeOrientation::None) {
+            reportContentOrientation(w, m_orientation);
+        }
     }
 }
 
@@ -403,6 +471,36 @@ void DeclarativeWindow::updateWindowSize()
 {
     // Original implementation doesn't change the window size
     // TODO: Implement window resizing logic when running on desktop
+}
+
+void DeclarativeWindow::reportContentOrientation(QWindow *window, int orientation)
+{
+    if (!window) {
+        return;
+    }
+
+    // Convert DeclarativeOrientation to Qt::ScreenOrientation
+    Qt::ScreenOrientation qtOrientation;
+    switch(orientation) {
+    case DeclarativeOrientation::Portrait:
+        qtOrientation = Qt::PortraitOrientation;
+        break;
+    case DeclarativeOrientation::Landscape:
+        qtOrientation = Qt::LandscapeOrientation;
+        break;
+    case DeclarativeOrientation::PortraitInverted:
+        qtOrientation = Qt::InvertedPortraitOrientation;
+        break;
+    case DeclarativeOrientation::LandscapeInverted:
+        qtOrientation = Qt::InvertedLandscapeOrientation;
+        break;
+    default:
+        qtOrientation = Qt::PortraitOrientation;
+        break;
+    }
+
+    // Report content orientation to window system - crucial for proper coordinate transformation
+    window->reportContentOrientationChange(qtOrientation);
 }
 
 QWindow* DeclarativeWindow::window() const

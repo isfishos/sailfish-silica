@@ -47,6 +47,8 @@ public:
     void setHeight(qreal height);
     int orientation() const { return m_orientation; }
     void setOrientation(int orientation);
+    void setExplicitOrientation(int orientation);
+    void resetOrientation();
     int pageOrientation() const { return m_pageOrientation; }
     void setPageOrientation(int orientation);
     void resetPageOrientation();
@@ -119,14 +121,18 @@ protected:
 private:
     void updateOrientation();
     void updateWindowFlags();
+    void updateWindowProperties();
     void updateWindowSize();
     void onWindowChanged();
-    void reportWindowOrientation();
+    void reportContentOrientation(QWindow *window, int orientation);
+    int selectOrientation(int allowedOrientations, int deviceOrientation) const;
 
     int m_orientation = 0;
     int m_pageOrientation = -1;
     int m_deviceOrientation = 0;
     int m_allowedOrientations = 0x0F;
+    bool m_explicitOrientation = false;
+    int m_screenRotation = 0;
     bool m_backgroundVisible = true;
     bool m_opaque = true;
     bool m_persistentOpenGLContext = false;
