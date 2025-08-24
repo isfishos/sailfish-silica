@@ -1,5 +1,7 @@
 #include "themecolors.h"
 #include "silicapalette_p.h"
+#include "silicatheme_p.h"
+#include "silicatheme.h"
 
 namespace Silica {
 
@@ -11,40 +13,103 @@ ThemeColors::ThemeColors(ThemePrivate *theme)
 
 QColor ThemeColors::color(ColorIndex index) const
 {
-    switch (index) {
-    case ColorIndex::Primary: return property("primary").toString();
-    case ColorIndex::Secondary: return property("secondary").toString();
-    case ColorIndex::Highlight: return property("highlight").toString();
-    case ColorIndex::SecondaryHighlight: return property("secondaryHighlight").toString();
-    case ColorIndex::HighlightBackground: return property("highlightBackground").toString();
-    case ColorIndex::HighlightDimmer: return property("highlightDimmer").toString();
-    case ColorIndex::OverlayBackground: return property("overlayBackground").toString();
-    case ColorIndex::BackgroundGlow: return property("backgroundGlow").toString();
-    case ColorIndex::Error: return property("error").toString();
-    case ColorIndex::WallpaperOverlay: return property("wallpaperOverlay").toString();
-    case ColorIndex::CoverOverlay: return property("coverOverlay").toString();
-    default:
-        Q_ASSERT_X(false, "ThemeColors::color", "Invalid color index");
-        return QColor();
+    // Check for runtime override first
+    auto it = m_runtimeColors.find(index);
+    if (it != m_runtimeColors.end()) {
+        return it.value();
     }
+
+    // Fall back to computed defaults
+    return computeDefaultColor(index);
 }
 
 void ThemeColors::setColor(ColorIndex index, const QColor &color)
 {
+    if (color.isValid()) {
+        m_runtimeColors[index] = color;
+    } else {
+        m_runtimeColors.remove(index);
+    }
+
+    // Notify palettes of color change
+    refreshPalettes();
+}
+
+QColor ThemeColors::computeDefaultColor(ColorIndex index) const
+{
+    Theme::ColorScheme currentScheme = m_theme->m_colorScheme;
+    QColor baseHighlight = getBaseHighlightColor();
+
+    return getColorForScheme(index, currentScheme, baseHighlight);
+}
+
+QColor ThemeColors::getBaseHighlightColor() const
+{
+    // Standard default highlight color
+    return QColor(127, 223, 255);
+}
+
+QColor ThemeColors::getColorForScheme(ColorIndex index, Theme::ColorScheme scheme, const QColor &highlight)
+{
+    using CS = Theme::ColorScheme;
+
     switch (index) {
-    case ColorIndex::Primary: setProperty("primary", color.name()); break;
-    case ColorIndex::Secondary: setProperty("secondary", color.name()); break;
-    case ColorIndex::Highlight: setProperty("highlight", color.name()); break;
-    case ColorIndex::SecondaryHighlight: setProperty("secondaryHighlight", color.name()); break;
-    case ColorIndex::HighlightBackground: setProperty("highlightBackground", color.name()); break;
-    case ColorIndex::HighlightDimmer: setProperty("highlightDimmer", color.name()); break;
-    case ColorIndex::OverlayBackground: setProperty("overlayBackground", color.name()); break;
-    case ColorIndex::BackgroundGlow: setProperty("backgroundGlow", color.name()); break;
-    case ColorIndex::Error: setProperty("error", color.name()); break;
-    case ColorIndex::WallpaperOverlay: setProperty("wallpaperOverlay", color.name()); break;
-    case ColorIndex::CoverOverlay: setProperty("coverOverlay", color.name()); break;
+    case ColorIndex::Primary:
+        return (scheme == CS::DarkOnLight)
+            ? QColor(0, 0, 0)
+            : QColor(255, 255, 255);
+
+    case ColorIndex::Secondary:
+        return (scheme == CS::DarkOnLight)
+            ? QColor(69, 69, 69)
+            : QColor(186, 186, 186);
+
+    case ColorIndex::Highlight:
+        return Theme::highlightFromColor(highlight, scheme);
+
+    case ColorIndex::SecondaryHighlight:
+        return Theme::secondaryHighlightFromColor(highlight, scheme);
+
+    case ColorIndex::HighlightBackground:
+        return Theme::highlightBackgroundFromColor(highlight, scheme);
+
+    case ColorIndex::HighlightDimmer:
+        return Theme::highlightDimmerFromColor(highlight, scheme);
+
+    case ColorIndex::OverlayBackground:
+        return (scheme == CS::DarkOnLight)
+            ? QColor(0xEE, 0xEE, 0xEE)
+            : QColor(Qt::black);
+
+    case ColorIndex::BackgroundGlow:
+        return (scheme == CS::DarkOnLight) ? highlight : QColor(Qt::transparent);
+
+    case ColorIndex::Error:
+        return (scheme == CS::DarkOnLight) ? QColor("#f62929") : QColor("#ff4d4d");
+
+    case ColorIndex::WallpaperOverlay:
+        return (scheme == CS::DarkOnLight)
+            ? QColor(255, 255, 255, 0x5A)
+            : QColor(0, 0, 0, 0x99);
+
+    case ColorIndex::CoverOverlay:
+        if (scheme == CS::DarkOnLight) {
+            return QColor::fromHsvF(highlight.hueF(), 0.5, 1.0, 0.3).toRgb();
+        } else {
+            return QColor::fromHsvF(highlight.hueF(), 1.0, 0.4, 0.5).toRgb();
+        }
+
     default:
-        Q_ASSERT_X(false, "ThemeColors::setColor", "Invalid color index");
+        return QColor();
+    }
+}
+
+void ThemeColors::refreshPalettes()
+{
+    for (PalettePrivate *palette : m_palettes) {
+        if (palette) {
+            palette->updateColors();
+        }
     }
 }
 
@@ -53,6 +118,13 @@ void ThemeColors::addPalette(PalettePrivate* palette)
     if (palette && !m_palettes.contains(palette)) {
         m_palettes.insert(palette);
         palette->updateColors();
+    }
+}
+
+void ThemeColors::removePalette(PalettePrivate* palette)
+{
+    if (palette) {
+        m_palettes.remove(palette);
     }
 }
 

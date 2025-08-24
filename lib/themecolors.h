@@ -31,6 +31,14 @@ public:
     QColor color(ColorIndex index) const;
     void setColor(ColorIndex index, const QColor &color);
 
+    QColor computeDefaultColor(ColorIndex index) const;
+    static QColor getColorForScheme(ColorIndex index, Theme::ColorScheme scheme, const QColor &highlight);
+
+private:
+    void refreshPalettes();
+    QColor getBaseHighlightColor() const;
+
+public:
     void setPrimary(const QString &value) { setColor(ColorIndex::Primary, QColor(value)); }
     void setSecondary(const QString &value) { setColor(ColorIndex::Secondary, QColor(value)); }
     void setHighlight(const QString &value) { setColor(ColorIndex::Highlight, QColor(value)); }
@@ -42,11 +50,13 @@ public:
     void setError(const QString &value) { setColor(ColorIndex::Error, QColor(value)); }
 
     void addPalette(PalettePrivate* palette);
+    void removePalette(PalettePrivate* palette);
     const QSet<PalettePrivate*>& palettes() const { return m_palettes; }
 
 private:
     ThemePrivate *m_theme;
     QSet<PalettePrivate*> m_palettes;
+    QMap<ColorIndex, QColor> m_runtimeColors; // Runtime color overrides
 };
 
 } // namespace Silica
