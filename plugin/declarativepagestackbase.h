@@ -34,7 +34,7 @@ public:
     explicit DeclarativePageStackBase(QQuickItem *parent = nullptr);
 
     bool isPressed() const { return m_pressed; }
-    bool isBusy() const { return m_busy; }
+    bool isBusy() const { return m_ongoingTransitionCount > 0; }
     int depth() const { return m_depth; }
     void setDepth(int depth);
     bool backNavigation() const { return m_backNavigation; }
@@ -49,17 +49,7 @@ public:
     qreal upFlickDifference() const { return m_upFlickDifference; }
     qreal downFlickDifference() const { return m_downFlickDifference; }
     int ongoingTransitionCount() const { return m_ongoingTransitionCount; }
-    void setOngoingTransitionCount(int c) {
-        if (m_ongoingTransitionCount != c) {
-            m_ongoingTransitionCount = c;
-            emit ongoingTransitionCountChanged();
-            const bool newBusy = (m_ongoingTransitionCount > 0);
-            if (m_busy != newBusy) {
-                m_busy = newBusy;
-                emit busyChanged();
-            }
-        }
-    }
+    void setOngoingTransitionCount(int ongoingTransitionCount);
     QQuickItem* currentContainer() const { return m_currentContainer; }
     void setCurrentContainer(QQuickItem *container);
     QQuickItem* currentPage() const { return m_currentPage; }
@@ -105,42 +95,33 @@ private:
     bool handleMouse(QMouseEvent *mouseEvent);
     bool isMouseGrabbed();
     void reset();
-    void updateFlickDifferences(const QPointF &delta);
-    void checkNavigationThreshold();
-    void incrementTransitionCount();
-    void decrementTransitionCount();
     void setLeftFlickDifference(qreal difference);
     void setRightFlickDifference(qreal difference);
     void setUpFlickDifference(qreal difference);
     void setDownFlickDifference(qreal difference);
 
     bool m_pressed = false;
-    bool m_busy = false;
     int m_depth = 0;
+    bool m_capture = false;
+    bool m_grabbed = false;
+    bool m_verticalBlock = false;
     bool m_backNavigation = true;
-    bool m_forwardNavigation = false;
     DeclarativePageNavigation::Style m_navigationStyle = DeclarativePageNavigation::Horizontal;
+    bool m_forwardNavigation = false;
+    bool m_noGrabbing = false;
+    bool m_navigatingLeft = false;
+    bool m_navigatingRight = false;
+    bool m_navigatingUp = false;
+    bool m_navigatingDown = false;
     qreal m_leftFlickDifference = 0.0;
     qreal m_rightFlickDifference = 0.0;
     qreal m_upFlickDifference = 0.0;
     qreal m_downFlickDifference = 0.0;
     int m_ongoingTransitionCount = 0;
+    QPointF m_pressPos;
     QPointer<QQuickItem> m_currentContainer;
     QPointer<QQuickItem> m_currentPage;
-    bool m_noGrabbing = false;
-
-    bool m_capture = false;
-    bool m_grabbed = false;
-    bool m_verticalBlock = false;
-    bool m_navigatingLeft = false;
-    bool m_navigatingRight = false;
-    bool m_navigatingUp = false;
-    bool m_navigatingDown = false;
-    QPointF m_pressPos;
-    QPointF m_lastPos;
-    QSet<QString> m_visitedPages;
     DeclarativeStandardPaths m_stdPaths;
-    static constexpr qreal NAVIGATION_THRESHOLD = 50.0;
 };
 
 #endif // SAILFISH_SILICA_PLUGIN_DECLARATIVEPAGESTACKBASE_H

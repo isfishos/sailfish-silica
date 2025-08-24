@@ -1,20 +1,35 @@
 // SPDX-License-Identifier: LGPL-2.1-only
 
 #include "declarativepagestackbase.h"
-#include <QMouseEvent>
-#include <QKeyEvent>
-#include <QQmlEngine>
-#include <QQmlContext>
-#include <QStandardPaths>
-#include <QDir>
 #include <QQuickWindow>
+#include <QGuiApplication>
+#include <QStyleHints>
+#include <QCoreApplication>
+#include <QMetaObject>
+#include <QKeyEvent>
+
+// Grab threshold multiplier
+#ifndef PAGESTACK_THRESHOLD_MULTIPLIER
+#define PAGESTACK_THRESHOLD_MULTIPLIER 1.5
+#endif
 
 DeclarativePageStackBase::DeclarativePageStackBase(QQuickItem *parent)
     : Silica::Control(parent)
 {
-    setAcceptedMouseButtons(Qt::LeftButton);
-    setFocus(true);
     setFiltersChildMouseEvents(true);
+    setAcceptedMouseButtons(Qt::LeftButton);
+}
+
+void DeclarativePageStackBase::setOngoingTransitionCount(int ongoingTransitionCount)
+{
+    if (m_ongoingTransitionCount != ongoingTransitionCount) {
+        bool wasBusy = isBusy();
+        m_ongoingTransitionCount = ongoingTransitionCount;
+        emit ongoingTransitionCountChanged();
+        if (wasBusy != isBusy()) {
+            emit busyChanged();
+        }
+    }
 }
 
 void DeclarativePageStackBase::setDepth(int depth)
@@ -77,25 +92,125 @@ void DeclarativePageStackBase::setNoGrabbing(bool noGrabbing)
 bool DeclarativePageStackBase::handlePress(const QPointF &pos)
 {
     m_pressPos = pos;
-    m_lastPos = pos;
-    m_pressed = true;
-    emit pressed();
-    emit pressedChanged();
-    return true; // Indicate we can handle the press
+
+    if (!isMouseGrabbed() && (backNavigation() || forwardNavigation() || m_noGrabbing)) {
+        m_pressed = true;
+        emit pressed();
+        emit pressedChanged();
+    }
+    return m_pressed;
 }
 
 bool DeclarativePageStackBase::handleMove(const QPointF &pos)
 {
-    if (!m_pressed) {
-        return false;
+    // Only consider moves when a press was registered or when we're in non-grabbing mode
+    if (m_pressed || m_noGrabbing) {
+        // If some other item has the mouse and we're not in non-grabbing mode, cancel
+        if (isMouseGrabbed() && !m_noGrabbing) {
+            reset();
+            return false;
+        }
+
+        // Detect the initial drag/capture threshold
+        if (!m_capture) {
+            const int threshold = PAGESTACK_THRESHOLD_MULTIPLIER * QGuiApplication::styleHints()->startDragDistance();
+
+            qreal deltaX = pos.x() - m_pressPos.x();
+            qreal deltaY = pos.y() - m_pressPos.y();
+
+            // If vertical motion clearly dominates horizontal and we expect horizontal gestures,
+            // suppress page stack activation for this gesture.
+            if (qAbs(deltaY) > qAbs(deltaX) && (horizontalNavigationStyle() && qAbs(deltaY) > threshold)) {
+                m_verticalBlock = true;
+            }
+
+            if (m_verticalBlock)
+                return false;
+
+            // If the move is in a direction that's currently disabled, treat it as a new press
+            if ((!forwardNavigation() && deltaX < 0.0) ||
+                (!backNavigation() && horizontalNavigationStyle() && deltaX > 0.0)) {
+                m_pressPos = pos;
+            } else if ((backNavigation() && horizontalNavigationStyle() && deltaX > threshold) ||
+                       (forwardNavigation() && deltaX < -threshold)) {
+                // Started a valid horizontal capture
+                m_pressPos.setX(pos.x());
+                m_capture = true;
+            } else if ((backNavigation() && !horizontalNavigationStyle() && qAbs(deltaY) > threshold)) {
+                // Started a valid vertical capture for back navigation
+                m_pressPos.setY(pos.y());
+                m_capture = true;
+            }
+
+            if (!m_noGrabbing)
+                return m_grabbed;
+        }
+
+        // We're captured: update grab state and per-direction differences
+        if (m_capture) {
+            if (!m_grabbed && !m_noGrabbing)
+                _grabMouse();
+
+            qreal leftDiff = 0.0;
+            qreal rightDiff = 0.0;
+            qreal upDiff = 0.0;
+            qreal downDiff = 0.0;
+
+            // Back navigation contributes to left/right or up/down depending on style
+            if (backNavigation()) {
+                if (horizontalNavigationStyle()) {
+                    if (!m_navigatingLeft)
+                        m_pressPos.setX(pos.x());
+                    leftDiff = qMax(qreal(0.0), pos.x() - m_pressPos.x());
+                } else {
+                    if (!m_navigatingUp && !m_navigatingDown)
+                        m_pressPos.setY(pos.y());
+                    upDiff = qMax(qreal(0.0), pos.y() - m_pressPos.y());
+                    if (!m_navigatingDown)
+                        m_pressPos.setY(pos.y());
+                    downDiff = qMax(qreal(0.0), 0.0 - (pos.y() - m_pressPos.y()));
+                }
+            }
+
+            if (forwardNavigation()) {
+                if (!m_navigatingRight)
+                    m_pressPos.setX(pos.x());
+                rightDiff = qMax(qreal(0.0), 0.0 - (pos.x() - m_pressPos.x()));
+            }
+
+            // Update which directions are currently tracked
+            m_navigatingLeft = backNavigation() && horizontalNavigationStyle();
+            m_navigatingRight = forwardNavigation();
+            m_navigatingUp = backNavigation() && !horizontalNavigationStyle();
+            m_navigatingDown = backNavigation() && !horizontalNavigationStyle();
+
+            // In non-grabbing mode, ensure we emit a press if it was missed
+            if (m_noGrabbing && !m_pressed) {
+                m_pressed = true;
+                emit pressed();
+                emit pressedChanged();
+            }
+
+            // Make sure zero transitions are emitted before positive changes to avoid flicker
+            if ((m_rightFlickDifference > 0.0) && (rightDiff == 0.0))
+                setRightFlickDifference(rightDiff);
+            else if ((m_leftFlickDifference > 0.0) && (leftDiff == 0.0))
+                setLeftFlickDifference(leftDiff);
+
+            if ((m_upFlickDifference > 0.0) && (upDiff == 0.0))
+                setUpFlickDifference(upDiff);
+            else if ((m_downFlickDifference > 0.0) && (downDiff == 0.0))
+                setDownFlickDifference(downDiff);
+
+            // Finally publish the measured differences
+            setLeftFlickDifference(leftDiff);
+            setDownFlickDifference(downDiff);
+            setRightFlickDifference(rightDiff);
+            setUpFlickDifference(upDiff);
+        }
     }
 
-    QPointF delta = pos - m_lastPos;
-    updateFlickDifferences(delta);
-    m_lastPos = pos;
-
-    checkNavigationThreshold();
-    return m_grabbed; // Return true if we've grabbed the mouse
+    return m_grabbed;
 }
 
 void DeclarativePageStackBase::handleRelease()
@@ -104,7 +219,13 @@ void DeclarativePageStackBase::handleRelease()
         m_pressed = false;
         emit pressedChanged();
         emit released();
+
+        if (m_grabbed) {
+            ungrabMouse();
+            setKeepMouseGrab(false);
+        }
     }
+    reset();
 }
 
 QString DeclarativePageStackBase::resolveImportPage(const QString &page)
@@ -141,24 +262,7 @@ void DeclarativePageStackBase::mouseReleaseEvent(QMouseEvent *event)
 
 void DeclarativePageStackBase::mouseUngrabEvent()
 {
-    // Reset state when grab is lost
-    m_capture = false;
-    m_grabbed = false;
-    m_verticalBlock = false;
-    if (m_pressed) {
-        m_pressed = false;
-        emit pressedChanged();
-        emit canceled();
-    }
-    setKeepMouseGrab(false);
-    m_navigatingLeft = false;
-    m_navigatingRight = false;
-    m_navigatingUp = false;
-    m_navigatingDown = false;
-    setLeftFlickDifference(0.0);
-    setRightFlickDifference(0.0);
-    setUpFlickDifference(0.0);
-    setDownFlickDifference(0.0);
+    reset();
 }
 
 bool DeclarativePageStackBase::childMouseEventFilter(QQuickItem *, QEvent *event)
@@ -166,11 +270,13 @@ bool DeclarativePageStackBase::childMouseEventFilter(QQuickItem *, QEvent *event
     switch (event->type()) {
     case QEvent::MouseButtonPress:
     case QEvent::MouseMove:
-    case QEvent::MouseButtonRelease:
+    case QEvent::MouseButtonRelease: {
         return handleMouse(static_cast<QMouseEvent *>(event));
+    }
     case QEvent::UngrabMouse:
+        // withdraw if something grabs the mouse first
         if (window() && window()->mouseGrabberItem() && window()->mouseGrabberItem() != this) {
-            mouseUngrabEvent();
+            reset();
         }
         break;
     default:
@@ -183,21 +289,24 @@ bool DeclarativePageStackBase::handleMouse(QMouseEvent *mouseEvent)
 {
     if (mouseEvent->type() == QEvent::MouseButtonRelease) {
         handleRelease();
-        return false;
-    }
-    if (m_currentContainer && m_currentPage && isVisible()) {
+    } else if (m_currentContainer && m_currentPage && isVisible()) {
         if (QQuickItem *parent_ = parentItem()) {
             switch (mouseEvent->type()) {
             case QEvent::MouseButtonPress:
             case QEvent::MouseMove: {
+                // Get the point in the pageStack coordinates
                 QPointF pos = parent_->mapFromScene(mouseEvent->windowPos());
+
+                // Offset by the current position of the container (and thus the page)
                 pos += m_currentContainer->position();
+
+                // Map into the page's coordinates
                 pos = QQuickItem::mapToItem(m_currentPage, pos);
+
                 if (mouseEvent->type() == QEvent::MouseButtonPress) {
                     handlePress(pos);
                 } else {
-                    handleMove(pos);
-                    return m_grabbed;
+                    return handleMove(pos);
                 }
                 break;
             }
@@ -211,70 +320,17 @@ bool DeclarativePageStackBase::handleMouse(QMouseEvent *mouseEvent)
 
 void DeclarativePageStackBase::keyReleaseEvent(QKeyEvent *event)
 {
-    if (event->key() == Qt::Key_Escape || event->key() == Qt::Key_Back) {
-        if (m_backNavigation) {
-            // TODO: Implement back navigation
-            emit canceled();
-        }
-        event->accept();
-    } else {
-        QQuickItem::keyReleaseEvent(event);
-    }
-}
-
-void DeclarativePageStackBase::updateFlickDifferences(const QPointF &delta)
-{
-    if (m_navigationStyle == DeclarativePageNavigation::Horizontal) {
-        if (delta.x() > 0) {
-            m_rightFlickDifference += delta.x();
-            emit forwardFlickDifferenceChanged();
-        } else {
-            m_leftFlickDifference += qAbs(delta.x());
-            emit backFlickDifferenceChanged();
-        }
-    } else { // Vertical
-        if (delta.y() > 0) {
-            m_downFlickDifference += delta.y();
-            emit downFlickDifferenceChanged();
-        } else {
-            m_upFlickDifference += qAbs(delta.y());
-            emit upFlickDifferenceChanged();
-        }
-    }
-}
-
-void DeclarativePageStackBase::checkNavigationThreshold()
-{
-    bool shouldNavigate = false;
-
-    if (m_navigationStyle == DeclarativePageNavigation::Horizontal) {
-        if (m_leftFlickDifference > NAVIGATION_THRESHOLD && m_backNavigation) {
-            shouldNavigate = true;
-        } else if (m_rightFlickDifference > NAVIGATION_THRESHOLD && m_forwardNavigation) {
-            shouldNavigate = true;
-        }
-    } else { // Vertical
-        if (m_upFlickDifference > NAVIGATION_THRESHOLD && m_backNavigation) {
-            shouldNavigate = true;
-        } else if (m_downFlickDifference > NAVIGATION_THRESHOLD && m_forwardNavigation) {
-            shouldNavigate = true;
+    bool accept = false;
+    static bool isAppWindow = qApp->platformName() == QLatin1String("wayland");
+    if (!isBusy() && isAppWindow && static_cast<QKeyEvent *>(event)->key() == Qt::Key_Back) {
+        if (m_depth > 1) {
+            QMetaObject::invokeMethod(this, "pop", Q_ARG(QVariant, QVariant()), Q_ARG(QVariant, QVariant()));
+            accept = true;
         }
     }
 
-    if (shouldNavigate && !m_busy) {
-        incrementTransitionCount();
-    }
-}
-
-void DeclarativePageStackBase::incrementTransitionCount()
-{
-    setOngoingTransitionCount(m_ongoingTransitionCount + 1);
-}
-
-void DeclarativePageStackBase::decrementTransitionCount()
-{
-    if (m_ongoingTransitionCount > 0) {
-        setOngoingTransitionCount(m_ongoingTransitionCount - 1);
+    if (!accept) {
+        event->ignore();
     }
 }
 
@@ -312,7 +368,12 @@ void DeclarativePageStackBase::setDownFlickDifference(qreal difference)
 
 bool DeclarativePageStackBase::isMouseGrabbed()
 {
-    return m_grabbed;
+    if (QQuickWindow *window_ = window()) {
+        // avoid flicking on top of slider and selection handles
+        QQuickItem *grabber = qobject_cast<QQuickItem*>(window_->mouseGrabberItem());
+        return grabber && grabber->keepMouseGrab() && grabber != this;
+    }
+    return false;
 }
 
 void DeclarativePageStackBase::reset()
@@ -323,6 +384,7 @@ void DeclarativePageStackBase::reset()
     if (m_pressed) {
         m_pressed = false;
         emit pressedChanged();
+        emit canceled();
     }
     setKeepMouseGrab(false);
     m_navigatingLeft = false;
