@@ -75,14 +75,7 @@ void DeclarativeDragFilter::cancelClick()
 
 DeclarativeDragFilter *DeclarativeDragFilter::qmlAttachedProperties(QObject *obj)
 {
-    // Return one instance per target object
-    static QHash<QObject*, DeclarativeDragFilter*> instances;
-
-    if (!instances.contains(obj)) {
-        instances[obj] = new DeclarativeDragFilter(obj);
-    }
-
-    return instances[obj];
+    return new DeclarativeDragFilter(obj);
 }
 
 bool DeclarativeDragFilter::eventFilter(QObject *obj, QEvent *event)
